@@ -49,7 +49,11 @@ var wheelCtx;
 var wheelRotation = 0;
 var wheelVelocity = 0;
 var songIndex = 0;
+var lastIndex = 0;
 var REMOVE = 0; // Pull an option after it is selected, on a new spin
+
+// Clicky noises!
+var clicky = new Audio('click.mp3');
 
 function addSong(songToAdd) {
     songlist.push(songToAdd);
@@ -233,13 +237,20 @@ function Update() {
         wheelRotation += wheelVelocity;
         wheelRotation %= 360;
         wheelVelocity *= 0.99;
+        let sliceSize = (360 / songlist.length);
+        songIndex = Math.floor((360 - wheelRotation + (sliceSize / 2)) / sliceSize);
+        songIndex %= songlist.length;
+        if (lastIndex != songIndex) {
+            clicky.cloneNode().play();
+            lastIndex = songIndex;
+        }
+
         if (wheelVelocity < 0.02) {
             wheelVelocity = 0;
-            let sliceSize = (360 / songlist.length);
-            songIndex = Math.floor((360 - wheelRotation + (sliceSize / 2)) / sliceSize);
-            songIndex %= songlist.length;
-            tryAddSongToQueue((songlist.splice(songIndex, 1)[0]));
-
+            let songToAdd = songlist.splice(songIndex, 1)[0];
+            if (!tryAddSongToQueue(songToAdd)) {
+                songlist.push(songToAdd);
+            }
         }
     }
     window.requestAnimationFrame(Update);

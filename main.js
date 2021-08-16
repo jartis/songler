@@ -1,5 +1,9 @@
 // Here's a crappy sample songlist while I test things out
 
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
+const GREEN = '#00FF00';
+
 var songlist = [
     ["The Beatles", "Blackbird"],
     ["Green Day", "Basket Case"],
@@ -21,6 +25,9 @@ var songlist = [
 // Set up a drawing target for the wheel
 var wheelCanvas;
 var wheelCtx;
+var wheelRotation = 0;
+var wheelVelocity = 0;
+
 function initWheelCanvas() {
     wheelCanvas = document.createElement('canvas');
     wheelCanvas.width = 800;
@@ -39,15 +46,13 @@ function initWheelCanvas() {
         wheelCtx.rotate(angle);
         wheelCtx.translate(-400, -400);
         wheelCtx.beginPath();
-        wheelCtx.arc(400, 400, 350, -(slice/2), slice/2, false);
+        wheelCtx.arc(400, 400, 350, -(slice / 2), slice / 2, false);
         wheelCtx.lineTo(400, 400);
         wheelCtx.fill();
         // Draw song label
         let displayName = songlist[i][0] + ' - ' + songlist[i][1];
-        fitTextToWidth(wheelCtx, displayName, 250);
+        fitText(wheelCtx, displayName, 250);
     }
-
-    srcctx.drawImage(wheelCanvas, 560, 140);
 }
 
 function boundedRandomColor() {
@@ -55,6 +60,17 @@ function boundedRandomColor() {
     let g = Math.floor(Math.random() * 150) + 50;
     let b = Math.floor(Math.random() * 150) + 50;
     return '#' + r.toString(16) + g.toString(16) + b.toString(16);
+}
+
+function fitText(context, textToFit, maxWidth) {
+    context.font = '12px Arial';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = BLACK;
+    context.fillText(textToFit, 601, 401);
+    context.fillStyle = WHITE;
+    context.fillText(textToFit, 599, 399);
+    // fitTextToWidth(context, textToFit, maxWidth);
 }
 
 function fitTextToWidth(context, textToFit, maxWidth) {
@@ -67,10 +83,66 @@ function fitTextToWidth(context, textToFit, maxWidth) {
     }
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    context.fillStyle = '#000000';
+    context.fillStyle = BLACK;
     context.fillText(textToFit, 601, 401);
-    context.fillStyle = '#FFFFFF';
+    context.fillStyle = WHITE;
     context.fillText(textToFit, 600, 400);
+}
+
+function Draw() {
+    // Clear the target
+    srcctx.fillStyle = GREEN;
+    srcctx.fillRect(0, 0, 1920, 1080);
+
+    // Draw the wheel itself
+    srcctx.translate(960, 540);
+    srcctx.rotate(wheelRotation * (Math.PI / 180));
+    srcctx.translate(-960, -540);
+    srcctx.drawImage(wheelCanvas, 560, 140);
+    srcctx.resetTransform();
+
+    // Draw the pointer and the spin overlay
+    srcctx.fillStyle = BLACK;
+    srcctx.beginPath();
+    srcctx.translate((1920 - 800) / 2, (1080 - 800) / 2);
+    srcctx.moveTo(745, 400);
+    srcctx.lineTo(775, 390);
+    srcctx.lineTo(775, 410);
+    srcctx.lineTo(745, 400);
+    srcctx.fill();
+    srcctx.resetTransform();
+    srcctx.moveTo(400, 400);
+    srcctx.beginPath();
+    srcctx.arc(960, 540, 45, 0, 2 * Math.PI);
+    srcctx.fill();
+    if (wheelVelocity == 0) {
+        srcctx.font = '16px Arial';
+        srcctx.textAlign = 'center';
+        srcctx.textBaseline = 'middle';
+        srcctx.fillStyle = WHITE;
+        srcctx.fillText('CLICK', 960, 520);
+        srcctx.fillText('TO', 960, 540);
+        srcctx.fillText('SPIN', 960, 560);
+        srcctx.fillText('CLICK', 961, 520);
+        srcctx.fillText('TO', 961, 540);
+        srcctx.fillText('SPIN', 961, 560);
+    }
+
+    DrawScreen();
+}
+
+function Update() {
+    Draw();
+
+    if (wheelVelocity > 0) {
+        wheelRotation += wheelVelocity;
+        wheelRotation %= 360;
+        wheelVelocity *= 0.99;
+        if (wheelVelocity < 0.01) {
+            wheelVelocity = 0;
+        }
+    }
+    window.requestAnimationFrame(Update);
 }
 
 //#region Utils and Helpers
@@ -97,9 +169,23 @@ function resize() {
 
 function DrawScreen() {
     // Maybe this should live elsewhere but
-    dstctx.fillStyle = '#00FF00';
+    dstctx.fillStyle = GREEN;
     dstctx.fillRect(0, 0, dstCanvas.width, dstCanvas.height);
     dstctx.drawImage(srcctx.canvas, 0, 0, 1920, 1080, screenOffsetX, screenOffsetY, newWidth, newHeight);
+}
+
+function canvasClicked(e) {
+    let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920;
+    let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080;
+    //let mx = ((e.clientX - screenOffsetX) / window.innerWidth) * 1920;
+    //let my = ((e.clientY - screenOffsetY) / window.innerHeight) * 1080;
+    // let mx = (e.clientX - screenOffsetX) * dscale;
+    // let my = (e.clientY - screenOffsetY) * dscale;
+    if (wheelVelocity == 0) {
+        if (mx > (960 - 45) && mx < (960 + 45) && my > (540 - 45) && my < (540 + 45)) {
+            wheelVelocity = 20 + (10 * Math.random());
+        }
+    }
 }
 
 // OnLoad initialization
@@ -108,8 +194,10 @@ window.onload = function () {
     initCanvases();
     window.addEventListener('resize', resize);
     listen('cbtn', 'click', showHideControls);
+    window.addEventListener('click', canvasClicked);
     initWheelCanvas();
     resize();
+    Update();
 };
 
 // Canvases
@@ -148,14 +236,14 @@ function initCanvases() {
     srcCanvas.width = 1920;
     srcCanvas.height = 1080;
     srcctx = srcCanvas.getContext('2d');
-    srcctx.fillStyle = '#00FF00';
+    srcctx.fillStyle = GREEN;
     srcctx.fillRect(0, 0, 1920, 1080);
 
     dstCanvas = document.getElementById('canvas');
     dstCanvas.width = window.innerWidth;
     dstCanvas.height = window.innerHeight;
     dstctx = dstCanvas.getContext('2d');
-    dstctx.fillStyle = '#00FF00';
+    dstctx.fillStyle = GREEN;
     dstctx.fillRect(0, 0, dstCanvas.width, dstCanvas.height);
 }
 

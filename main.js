@@ -27,6 +27,8 @@ var wheelCanvas;
 var wheelCtx;
 var wheelRotation = 0;
 var wheelVelocity = 0;
+var songIndex = 0;
+var REMOVE = 0; // Pull an option after it is selected, on a new spin
 
 function initWheelCanvas() {
     wheelCanvas = document.createElement('canvas');
@@ -70,23 +72,6 @@ function fitText(context, textToFit, maxWidth) {
     context.fillText(textToFit, 601, 401);
     context.fillStyle = WHITE;
     context.fillText(textToFit, 599, 399);
-    // fitTextToWidth(context, textToFit, maxWidth);
-}
-
-function fitTextToWidth(context, textToFit, maxWidth) {
-    txtSizeTop = 100;
-    context.font = txtSizeTop + 'px Arial'; // TODO: Font selection?
-    while (context.measureText(textToFit).width > maxWidth) {
-        txtSizeTop--;
-        if (txtSizeTop < 8) break;
-        context.font = txtSizeTop + 'px Arial'; // TODO: Font selection?
-    }
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillStyle = BLACK;
-    context.fillText(textToFit, 601, 401);
-    context.fillStyle = WHITE;
-    context.fillText(textToFit, 600, 400);
 }
 
 function Draw() {
@@ -115,7 +100,7 @@ function Draw() {
     srcctx.beginPath();
     srcctx.arc(960, 540, 45, 0, 2 * Math.PI);
     srcctx.fill();
-    if (wheelVelocity == 0) {
+    if (wheelVelocity == 0 && songlist.length > 1) {
         srcctx.font = '16px Arial';
         srcctx.textAlign = 'center';
         srcctx.textBaseline = 'middle';
@@ -131,6 +116,17 @@ function Draw() {
     DrawScreen();
 }
 
+function spinWheel() {
+    if (REMOVE == 1 && songlist.length > 1) {
+        songlist.splice(songIndex, 1);
+    }
+    initWheelCanvas();
+    wheelVelocity = 20 + (10 * Math.random());
+    if (REMOVE == 0) {
+        REMOVE = 1;
+    }
+}
+
 function Update() {
     Draw();
 
@@ -138,11 +134,23 @@ function Update() {
         wheelRotation += wheelVelocity;
         wheelRotation %= 360;
         wheelVelocity *= 0.99;
-        if (wheelVelocity < 0.01) {
+        if (wheelVelocity < 0.02) {
             wheelVelocity = 0;
+            let sliceSize = (360 / songlist.length);
+            songIndex = Math.floor((360 - wheelRotation + (sliceSize/2)) / sliceSize);
         }
     }
     window.requestAnimationFrame(Update);
+}
+
+function canvasClicked(e) {
+    let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920;
+    let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080;
+    if (wheelVelocity == 0 && songlist.length > 1) {
+        if (mx > (960 - 45) && mx < (960 + 45) && my > (540 - 45) && my < (540 + 45)) {
+            spinWheel();
+        }
+    }
 }
 
 //#region Utils and Helpers
@@ -172,20 +180,6 @@ function DrawScreen() {
     dstctx.fillStyle = GREEN;
     dstctx.fillRect(0, 0, dstCanvas.width, dstCanvas.height);
     dstctx.drawImage(srcctx.canvas, 0, 0, 1920, 1080, screenOffsetX, screenOffsetY, newWidth, newHeight);
-}
-
-function canvasClicked(e) {
-    let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920;
-    let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080;
-    //let mx = ((e.clientX - screenOffsetX) / window.innerWidth) * 1920;
-    //let my = ((e.clientY - screenOffsetY) / window.innerHeight) * 1080;
-    // let mx = (e.clientX - screenOffsetX) * dscale;
-    // let my = (e.clientY - screenOffsetY) * dscale;
-    if (wheelVelocity == 0) {
-        if (mx > (960 - 45) && mx < (960 + 45) && my > (540 - 45) && my < (540 + 45)) {
-            wheelVelocity = 20 + (10 * Math.random());
-        }
-    }
 }
 
 // OnLoad initialization

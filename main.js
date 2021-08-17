@@ -2,7 +2,7 @@
 
 const BLACK = '#000000';
 const WHITE = '#FFFFFF';
-const GREEN = '#00FF00';
+const GREEN = '#008800';
 const YELLOW = '#FFFF00';
 const RED = '#FF0000';
 const BLUE = '#0000FF';
@@ -10,6 +10,17 @@ const BLUE = '#0000FF';
 var maxPovertyQueueSize = 10;
 var maxPriorityQueueSize = 10;
 var maxTotalQueueSize = 5;
+
+var wheelPalette = [
+    '#3333FF',
+    '#333333',
+    '#FFFF33',
+    '#33FF33',
+    '#FF33FF',
+    '#FF3333',
+    '#33FFFF',
+];
+var wheelPaletteIndex = 0;
 
 var songlist = [
     ["The Beatles", "Blackbird"],
@@ -42,6 +53,7 @@ var otherRandomSongs = [
 
 var povertyQueue = [];
 var priorityQueue = [];
+var curWheelTitle = ''
 
 // Set up a drawing target for the wheel
 var wheelCanvas;
@@ -52,8 +64,21 @@ var songIndex = 0;
 var lastIndex = 0;
 var REMOVE = 0; // Pull an option after it is selected, on a new spin
 
-// Clicky noises!
-var clicky = new Audio('click.mp3');
+// Noises!
+var clicky = [
+    new Audio('click.mp3'),
+    new Audio('click.mp3'),
+    new Audio('click.mp3'),
+    new Audio('click.mp3'),
+    new Audio('click.mp3'),
+    new Audio('click.mp3'),
+    new Audio('click.mp3'),
+    new Audio('click.mp3'),
+    new Audio('click.mp3'),
+    new Audio('click.mp3'),
+];
+var clickyIndex = 0;
+var chime = new Audio('chime.mp3');
 
 function addSong(songToAdd) {
     songlist.push(songToAdd);
@@ -71,7 +96,9 @@ function initWheelCanvas() {
     let count = songlist.length;
     for (let i = 0; i < count; i++) {
         if (songlist[i].length < 3) {
-            songlist[i][2] = boundedRandomColor(); // Pick a color for this song!
+            songlist[i][2] = wheelPalette[wheelPaletteIndex];
+            wheelPaletteIndex++;
+            wheelPaletteIndex %= wheelPalette.length;
         }
         wheelCtx.fillStyle = songlist[i][2];
 
@@ -96,6 +123,18 @@ function boundedRandomColor() {
     let g = Math.floor(Math.random() * 150) + 50;
     let b = Math.floor(Math.random() * 150) + 50;
     return '#' + r.toString(16) + g.toString(16) + b.toString(16);
+}
+
+function boundedBoldColor() {
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+        if (Math.random() < 0.5) {
+            color += "2";
+        } else {
+            color += "C";
+        }
+    }
+    return color;
 }
 
 function fitText(context, textToFit, maxWidth) {
@@ -132,8 +171,9 @@ function Draw() {
     srcctx.arc(960, 540, 45, 0, 2 * Math.PI);
     srcctx.fill();
     if (wheelVelocity == 0 && songlist.length >= 1) {
-        drawWheel();
+        drawClickToSpin();
     }
+    drawWheelSelectedText();
     drawAddSongToQueueButton();
     drawAddSongToWheelButton();
     drawAddPriorityButton();
@@ -215,7 +255,7 @@ function drawAddPriorityButton() {
     drawBoldText(srcctx, 1770, 1060, 'THE QUEUE', WHITE);
 }
 
-function drawWheel() {
+function drawClickToSpin() {
     srcctx.font = '16px Arial';
     srcctx.textAlign = 'center';
     srcctx.textBaseline = 'middle';
@@ -223,6 +263,14 @@ function drawWheel() {
     drawBoldText(srcctx, 960, 520, 'CLICK', WHITE);
     drawBoldText(srcctx, 960, 540, 'TO', WHITE);
     drawBoldText(srcctx, 960, 560, 'SPIN', WHITE);
+}
+
+function drawWheelSelectedText() {
+    srcctx.font = '32px Arial';
+    srcctx.textAlign = 'center';
+    srcctx.textBaseline = 'middle';
+    srcctx.fillStyle = WHITE;
+    drawShadowedText(srcctx, 960, 915, curWheelTitle, WHITE)
 }
 
 function spinWheel() {
@@ -240,13 +288,17 @@ function Update() {
         let sliceSize = (360 / songlist.length);
         songIndex = Math.floor((360 - wheelRotation + (sliceSize / 2)) / sliceSize);
         songIndex %= songlist.length;
+        curWheelTitle = songlist[songIndex][0] + ' - ' + songlist[songIndex][1];
         if (lastIndex != songIndex) {
-            clicky.cloneNode().play();
+            clicky[clickyIndex].play();
+            clickyIndex++;
+            clickyIndex %= 10;
             lastIndex = songIndex;
         }
 
         if (wheelVelocity < 0.02) {
             wheelVelocity = 0;
+            chime.play();
             let songToAdd = songlist.splice(songIndex, 1)[0];
             if (!tryAddSongToQueue(songToAdd)) {
                 songlist.push(songToAdd);

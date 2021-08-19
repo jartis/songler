@@ -1,15 +1,21 @@
 // Here's a crappy sample songlist while I test things out
 
+// FOR DEBUGGING:
+const APIURL = 'http://127.0.0.1:5000/api/v1';
+
 const BLACK = '#000000';
 const WHITE = '#FFFFFF';
 const GREEN = '#008800';
 const YELLOW = '#FFFF00';
 const RED = '#FF0000';
 const BLUE = '#0000FF';
+const TRANSPARENT = '#00000000';
 
-var maxPovertyQueueSize = 10;
-var maxPriorityQueueSize = 10;
-var maxTotalQueueSize = 5;
+const USERID = 1; // I'm the video game boy! I'm the one who wins!
+
+var maxPovertyQueueSize = 100;
+var maxPriorityQueueSize = 100;
+var maxTotalQueueSize = 100;
 
 var wheelPalette = [
     '#3333FF',
@@ -23,45 +29,34 @@ var wheelPalette = [
 var wheelPaletteIndex = 0;
 
 var songlist = [
-    ["The Beatles", "Blackbird"],
-    ["Green Day", "Basket Case"],
-    ["Dr. Hook", "The Wonderful Soup Stone"],
-    ["Stan Rogers", "The Mary Ellen Carter"],
+    ["Artist", "Title"],
+    ["Artist", "Title"],
+    ["Artist", "Title"],
 ];
 
 var otherRandomSongs = [
-    ["The Eagles", "Certain Kind Of Fool"],
-    ["Jimi Hendrix", "Bold As Love"],
-    ["Tesla", "Love Song"],
-    ["Everclear", "Fire Maple Song"],
-    ["Aerosmith", "Dream On"],
-    ["Beach Boys", "Surfer Girl"],
-    ["The Who", "5:15"],
-    ["Dire Straits", "Sultans of Swing"],
-    ["The Lumineers", "Cleopatra"],
-    ["Glen Campbell", "Wichita Lineman"],
-    ["Jim Croce", "Operator"],
-    ["Weezer", "Longtime Sunshine"],
-    ["The Beatles", "Two Of Us"],
-    ["Katamari Damacy", "Lonely Rolling Star"],
-    ["Nickelback", "How You Remind Me"],
-    ["The Flaming Lips", "The Castle"],
-    ["Alice In Chains", "Got Me Wrong"],
-    ["Pink Floyd", "Mother"],
-    ["Stone Temple Pilots", "Still Remains"],
+    ["Artist", "Title"],
+    ["Artist", "Title"],
+    ["Artist", "Title"],
 ];
 
 var povertyQueue = [];
 var priorityQueue = [];
-var curWheelTitle = ''
+var curWheelTitle = '';
 
 // Set up a drawing target for the wheel
 var wheelCanvas;
 var wheelCtx;
+var wheelBufCanvas;
+var wheelBufCtx;
 var wheelRotation = 0;
 var wheelVelocity = 0;
 var songIndex = 0;
 var lastIndex = 0;
+var wheelLeft = (1920 - 800) / 2;
+var wheelTop = (1080 - 800) / 2;
+var wheelSize = 800;
+
 var REMOVE = 0; // Pull an option after it is selected, on a new spin
 
 // Noises!
@@ -86,21 +81,18 @@ function addSong(songToAdd) {
 }
 
 function initWheelCanvas() {
-    wheelCanvas = document.createElement('canvas');
-    wheelCanvas.width = 800;
-    wheelCanvas.height = 800;
-    wheelCtx = wheelCanvas.getContext('2d');
-    wheelCtx.fillStyle = '#00000000'; // Transparent
-    wheelCtx.fillRect(0, 0, 800, 800);
-
     let count = songlist.length;
     for (let i = 0; i < count; i++) {
-        if (songlist[i].length < 3) {
-            songlist[i][2] = wheelPalette[wheelPaletteIndex];
+        if (songlist[i].color == undefined) {
+            songlist[i].color = wheelPalette[wheelPaletteIndex];
             wheelPaletteIndex++;
+            if (Math.random() > 0.5) wheelPaletteIndex++;
+            if (Math.random() > 0.5) wheelPaletteIndex++;
             wheelPaletteIndex %= wheelPalette.length;
         }
-        wheelCtx.fillStyle = songlist[i][2];
+        wheelCtx.fillStyle = songlist[i].color;
+        wheelCtx.lineStyle = BLACK;
+        wheelCtx.lineWidth = 2;
 
         let slice = ((360 / count) * (Math.PI / 180));
         let angle = i * slice;
@@ -109,11 +101,14 @@ function initWheelCanvas() {
         wheelCtx.rotate(angle);
         wheelCtx.translate(-400, -400);
         wheelCtx.beginPath();
+        wheelCtx.moveTo(400, 400);
+        wheelCtx.lineTo(400 + (Math.cos(-slice / 2) * 350), 400 + (Math.sin(-slice / 2) * 350));
         wheelCtx.arc(400, 400, 350, -(slice / 2), slice / 2, false);
         wheelCtx.lineTo(400, 400);
         wheelCtx.fill();
+        wheelCtx.stroke();
         // Draw song label
-        let displayName = songlist[i][0] + ' - ' + songlist[i][1];
+        let displayName = /*songlist[i][0] + ' - ' +*/ songlist[i].title;
         fitText(wheelCtx, displayName, 250);
     }
 }
@@ -139,47 +134,65 @@ function boundedBoldColor() {
 
 function fitText(context, textToFit, maxWidth) {
     context.font = '12px Arial';
-    context.textAlign = 'center';
+    context.textAlign = 'right';
     context.textBaseline = 'middle';
-    drawShadowedText(context, 600, 400, textToFit, WHITE);
+    drawShadowedText(context, 740, 400, textToFit, WHITE);
 }
 
 function Draw() {
     // Clear the target
-    srcctx.fillStyle = GREEN;
+    srcctx.fillStyle = '#00880044'; // Partly transparent green for motion smooth/blur
     srcctx.fillRect(0, 0, 1920, 1080);
+    // Clear the wheel buffer
+    wheelBufCtx.fillStyle = TRANSPARENT;
+    wheelBufCtx.clearRect(0, 0, 800, 800);
 
-    // Draw the wheel itself
-    srcctx.translate(960, 540);
-    srcctx.rotate(wheelRotation * (Math.PI / 180));
-    srcctx.translate(-960, -540);
-    srcctx.drawImage(wheelCanvas, 560, 140);
-    srcctx.resetTransform();
-
-    // Draw the pointer and the spin overlay
-    srcctx.fillStyle = BLACK;
-    srcctx.beginPath();
-    srcctx.translate((1920 - 800) / 2, (1080 - 800) / 2);
-    srcctx.moveTo(745, 400);
-    srcctx.lineTo(775, 390);
-    srcctx.lineTo(775, 410);
-    srcctx.lineTo(745, 400);
-    srcctx.fill();
-    srcctx.resetTransform();
-    srcctx.moveTo(400, 400);
-    srcctx.beginPath();
-    srcctx.arc(960, 540, 45, 0, 2 * Math.PI);
-    srcctx.fill();
-    if (wheelVelocity == 0 && songlist.length >= 1) {
-        drawClickToSpin();
-    }
-    drawWheelSelectedText();
+    drawWheel();
     drawAddSongToQueueButton();
     drawAddSongToWheelButton();
     drawAddPriorityButton();
     drawQueue();
 
     DrawScreen();
+}
+
+function drawWheel() {
+    // Draw the wheel itself onto the buffer
+    wheelBufCtx.translate(400, 400);
+    wheelBufCtx.rotate(wheelRotation * (Math.PI / 180));
+    wheelBufCtx.translate(-400, -400);
+    wheelBufCtx.drawImage(wheelCanvas, 0, 0);
+    wheelBufCtx.resetTransform();
+
+    // Draw the pointer
+    wheelBufCtx.fillStyle = BLACK;
+    wheelBufCtx.beginPath();
+    wheelBufCtx.moveTo(745, 400);
+    wheelBufCtx.lineTo(775, 390);
+    wheelBufCtx.lineTo(775, 410);
+    wheelBufCtx.lineTo(745, 400);
+    wheelBufCtx.fill();
+
+    // ...and the spin overlay
+    wheelBufCtx.moveTo(400, 400);
+    wheelBufCtx.beginPath();
+    wheelBufCtx.arc(400, 400, 80, 0, 2 * Math.PI);
+    wheelBufCtx.fill();
+
+    // The spin text if necessary
+    if (wheelVelocity == 0 && songlist.length >= 1) {
+        drawClickToSpin();
+    }
+
+    // And the selected song
+    wheelBufCtx.font = '32px Arial';
+    wheelBufCtx.textAlign = 'center';
+    wheelBufCtx.textBaseline = 'middle';
+    wheelBufCtx.fillStyle = WHITE;
+    drawShadowedText(wheelBufCtx, 400, 775, curWheelTitle, WHITE);
+
+    // Then blurp it out to the src canvas
+    srcctx.drawImage(wheelBufCanvas, wheelLeft, wheelTop, wheelSize, wheelSize);
 }
 
 function drawShadowedText(ctx, x, y, text, col) {
@@ -204,11 +217,11 @@ function drawQueue() {
     srcctx.textBaseline = 'top';
     let lineY = 80;
     for (let i = 0; i < priorityQueue.length; i++) {
-        drawShadowedText(srcctx, 180, lineY, priorityQueue[i][0] + ' - ' + priorityQueue[i][1], YELLOW);
+        drawShadowedText(srcctx, 180, lineY, getFullName(priorityQueue[i]), YELLOW);
         lineY += 30;
     }
     for (let i = 0; i < povertyQueue.length; i++) {
-        drawShadowedText(srcctx, 180, lineY, povertyQueue[i][0] + ' - ' + povertyQueue[i][1], WHITE);
+        drawShadowedText(srcctx, 180, lineY, getFullName(povertyQueue[i]), WHITE);
         lineY += 30;
     }
 }
@@ -256,21 +269,13 @@ function drawAddPriorityButton() {
 }
 
 function drawClickToSpin() {
-    srcctx.font = '16px Arial';
-    srcctx.textAlign = 'center';
-    srcctx.textBaseline = 'middle';
-    srcctx.fillStyle = WHITE;
-    drawBoldText(srcctx, 960, 520, 'CLICK', WHITE);
-    drawBoldText(srcctx, 960, 540, 'TO', WHITE);
-    drawBoldText(srcctx, 960, 560, 'SPIN', WHITE);
-}
-
-function drawWheelSelectedText() {
-    srcctx.font = '32px Arial';
-    srcctx.textAlign = 'center';
-    srcctx.textBaseline = 'middle';
-    srcctx.fillStyle = WHITE;
-    drawShadowedText(srcctx, 960, 915, curWheelTitle, WHITE)
+    wheelBufCtx.font = '24px Arial';
+    wheelBufCtx.textAlign = 'center';
+    wheelBufCtx.textBaseline = 'middle';
+    wheelBufCtx.fillStyle = WHITE;
+    drawBoldText(wheelBufCtx, 400, 370, 'CLICK', WHITE);
+    drawBoldText(wheelBufCtx, 400, 400, 'TO', WHITE);
+    drawBoldText(wheelBufCtx, 400, 430, 'SPIN', WHITE);
 }
 
 function spinWheel() {
@@ -288,7 +293,7 @@ function Update() {
         let sliceSize = (360 / songlist.length);
         songIndex = Math.floor((360 - wheelRotation + (sliceSize / 2)) / sliceSize);
         songIndex %= songlist.length;
-        curWheelTitle = songlist[songIndex][0] + ' - ' + songlist[songIndex][1];
+        curWheelTitle = getFullName(songlist[songIndex]);
         if (lastIndex != songIndex) {
             clicky[clickyIndex].play();
             clickyIndex++;
@@ -306,6 +311,10 @@ function Update() {
         }
     }
     window.requestAnimationFrame(Update);
+}
+
+function getFullName(song) {
+    return song.artist + ' - ' + song.title;
 }
 
 function tryAddSongToQueue(songToAdd, priority = false) {
@@ -329,8 +338,8 @@ function tryAddSongToQueue(songToAdd, priority = false) {
 }
 
 function canvasClicked(e) {
-    let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920;
-    let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080;
+    let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920; // Relative position in overlay
+    let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080; // Relative position in overlay
     if (mx > (960 - 45) && mx < (960 + 45) && my > (540 - 45) && my < (540 + 45)) {
         // Wheel spinny button
         if (wheelVelocity == 0 && songlist.length >= 1) {
@@ -363,13 +372,30 @@ function canvasClicked(e) {
             return;
         }
         if (queueIndex < priorityQueue.length) {
-            priorityQueue.splice(queueIndex, 1);
+            if (playSong(priorityQueue[queueIndex])) {
+                priorityQueue.splice(queueIndex, 1);
+            } else {
+                console.log("Error removing song from queue!");
+            }
             return;
         }
         queueIndex -= priorityQueue.length;
-        povertyQueue.splice(queueIndex, 1);
-
+        if (playSong(povertyQueue[queueIndex])) {
+            povertyQueue.splice(queueIndex, 1);
+        } else {
+            console.log("Error removing song from queue!");
+        }
     }
+}
+
+function playSong(song) {
+    const req = new XMLHttpRequest();
+    req.onload = function () {
+        return true;
+    };
+    req.open('GET', APIURL + '/play?sid=' + song.songid);
+    req.send();
+    return true;
 }
 
 //#region Utils and Helpers
@@ -411,7 +437,21 @@ window.onload = function () {
     initWheelCanvas();
     resize();
     Update();
+    loadSongs();
 };
+
+function loadSongs() {
+    const req = new XMLHttpRequest();
+    req.onload = function () {
+        songlist = JSON.parse(this.responseText);
+        shuffle(songlist);
+        songlist = songlist.splice(0, 50);
+        shuffle(songlist);
+        initWheelCanvas();
+    };
+    req.open('GET', APIURL + '/songlist?uid=' + USERID);
+    req.send();
+}
 
 // Canvases
 var srcCanvas;
@@ -458,6 +498,20 @@ function initCanvases() {
     dstctx = dstCanvas.getContext('2d');
     dstctx.fillStyle = GREEN;
     dstctx.fillRect(0, 0, dstCanvas.width, dstCanvas.height);
+
+    wheelCanvas = document.createElement('canvas');
+    wheelCanvas.width = 800;
+    wheelCanvas.height = 800;
+    wheelCtx = wheelCanvas.getContext('2d');
+    wheelCtx.fillStyle = TRANSPARENT;
+    wheelCtx.fillRect(0, 0, 800, 800);
+
+    wheelBufCanvas = document.createElement('canvas');
+    wheelBufCanvas.width = 800;
+    wheelBufCanvas.height = 800;
+    wheelBufCtx = wheelBufCanvas.getContext('2d');
+    wheelBufCtx.fillStyle = TRANSPARENT;
+    wheelBufCtx.fillRect(0, 0, 800, 800);
 }
 
 function shuffle(array) {

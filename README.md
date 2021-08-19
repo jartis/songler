@@ -16,12 +16,14 @@ Song picker / request tracker / etc for Twitch
   * Update "Last Played" on "Play"
   * Reveal "Remove" X on hover over song?
 * Choice of different "click" sounds for wheel spin
-* Chime on wheel stop?
 * Configuration for wheel palettes / random wheel colors
 * Make titles on wheel inverse/contrast slice color
+* No adjacent wheel slots with matching colors
+* Error handling on click-to-play
 
 ## Done
 
+* ~~Chime on wheel stop?~~
 * ~~Fixed number of audio clones to prevent too much overlap~~
 * ~~Request Queue? Priority request tracking?~~
 * ~~Clear out songs from the queue by clicking~~

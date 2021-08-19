@@ -30,14 +30,9 @@ var wheelPaletteIndex = 0;
 
 var songlist = [
     ["Artist", "Title"],
-    ["Artist", "Title"],
-    ["Artist", "Title"],
 ];
 
 var otherRandomSongs = [
-    ["Artist", "Title"],
-    ["Artist", "Title"],
-    ["Artist", "Title"],
 ];
 
 var povertyQueue = [];
@@ -58,6 +53,7 @@ var wheelTop = (1080 - 800) / 2;
 var wheelSize = 800;
 
 var REMOVE = 0; // Pull an option after it is selected, on a new spin
+var xIndex = -1;
 
 // Noises!
 var clicky = [
@@ -224,6 +220,10 @@ function drawQueue() {
         drawShadowedText(srcctx, 180, lineY, getFullName(povertyQueue[i]), WHITE);
         lineY += 30;
     }
+
+    if (xIndex >= 0) {
+        drawShadowedText(srcctx, 150, 80 + (30 * xIndex), '✖', RED);
+    }
 }
 
 function drawAddSongToWheelButton() {
@@ -337,6 +337,20 @@ function tryAddSongToQueue(songToAdd, priority = false) {
     }
 }
 
+function mouseMoved(e) {
+    xIndex = -1;
+    let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920; // Relative position in overlay
+    let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080; // Relative position in overlay
+    if (mx > 150 && mx < 580 && my > 80) {
+        let queueIndex = Math.floor((my - 80) / 30);
+        let totalQueueSize = (priorityQueue.length) + (povertyQueue.length);
+        if (queueIndex >= totalQueueSize) {
+            return;
+        }
+        xIndex = queueIndex;
+    }
+}
+
 function canvasClicked(e) {
     let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920; // Relative position in overlay
     let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080; // Relative position in overlay
@@ -364,7 +378,7 @@ function canvasClicked(e) {
         if (!tryAddSongToQueue(songToAdd)) {
             otherRandomSongs.push(songToAdd);
         }
-    } else if (mx > 180 && mx < 580 && my > 80) {
+    } else if (mx > 150 && mx < 580 && my > 80) {
         // Remove a song from the queue
         let queueIndex = Math.floor((my - 80) / 30);
         let totalQueueSize = (priorityQueue.length) + (povertyQueue.length);
@@ -372,18 +386,31 @@ function canvasClicked(e) {
             return;
         }
         if (queueIndex < priorityQueue.length) {
-            if (playSong(priorityQueue[queueIndex])) {
+            if (mx > 180) {
+                if (playSong(priorityQueue[queueIndex])) {
+                    console.log('Played priority song index ' + queueIndex);
+                    priorityQueue.splice(queueIndex, 1);
+                } else {
+                    console.log("Error removing song from queue!");
+                }
+                return;
+            } else {
+                console.log('Deleted priority song index ' + queueIndex);
                 priorityQueue.splice(queueIndex, 1);
+                return;
+            }
+        }
+        queueIndex -= priorityQueue.length;
+        if (mx > 180) {
+            if (playSong(povertyQueue[queueIndex])) {
+                console.log('Played standard song index ' + queueIndex);
+                povertyQueue.splice(queueIndex, 1);
             } else {
                 console.log("Error removing song from queue!");
             }
-            return;
-        }
-        queueIndex -= priorityQueue.length;
-        if (playSong(povertyQueue[queueIndex])) {
-            povertyQueue.splice(queueIndex, 1);
         } else {
-            console.log("Error removing song from queue!");
+            console.log('Deleted standard song index ' + queueIndex);
+            povertyQueue.splice(queueIndex, 1);
         }
     }
 }
@@ -434,6 +461,7 @@ window.onload = function () {
     window.addEventListener('resize', resize);
     listen('cbtn', 'click', showHideControls);
     window.addEventListener('click', canvasClicked);
+    window.addEventListener('mousemove', mouseMoved);
     initWheelCanvas();
     resize();
     Update();
@@ -443,10 +471,12 @@ window.onload = function () {
 function loadSongs() {
     const req = new XMLHttpRequest();
     req.onload = function () {
-        songlist = JSON.parse(this.responseText);
+        let biglist = JSON.parse(this.responseText);
+        shuffle(biglist);
+        songlist = biglist.splice(0, 50);
+        otherRandomSongs = biglist.splice(0, 50);
         shuffle(songlist);
-        songlist = songlist.splice(0, 50);
-        shuffle(songlist);
+        shuffle(otherRandomSongs);
         initWheelCanvas();
     };
     req.open('GET', APIURL + '/songlist?uid=' + USERID);

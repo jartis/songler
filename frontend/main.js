@@ -29,7 +29,11 @@ var wheelPalette = [
 var wheelPaletteIndex = 0;
 
 var songlist = [
-    ["Artist", "Title"],
+    {
+        'artist': 'artist',
+        'title': 'title',
+        'color': '#808080',
+    }
 ];
 
 var otherRandomSongs = [
@@ -52,6 +56,13 @@ var wheelLeft = (1920 - 800) / 2;
 var wheelTop = (1080 - 800) / 2;
 var wheelSize = 800;
 
+// Set up a drawing target for the request list
+var queueCanvas;
+var queueCtx;
+var queueLeft = 150;
+var queueTop = 20;
+var queueSize = 800;
+
 var REMOVE = 0; // Pull an option after it is selected, on a new spin
 var xIndex = -1;
 
@@ -68,8 +79,10 @@ var clicky = [
     new Audio('click.mp3'),
     new Audio('click.mp3'),
 ];
+for (let i = 0; i < 10; i++) { clicky[i].volume = 0.2; }
 var clickyIndex = 0;
 var chime = new Audio('chime.mp3');
+chime.volume = 0.2;
 
 function addSong(songToAdd) {
     songlist.push(songToAdd);
@@ -105,7 +118,7 @@ function initWheelCanvas() {
         wheelCtx.stroke();
         // Draw song label
         let displayName = /*songlist[i][0] + ' - ' +*/ songlist[i].title;
-        fitText(wheelCtx, displayName, 250);
+        drawLabel(wheelCtx, displayName, songlist[i].color);
     }
 }
 
@@ -128,11 +141,16 @@ function boundedBoldColor() {
     return color;
 }
 
-function fitText(context, textToFit, maxWidth) {
+function drawLabel(context, textToFit, col) {
     context.font = '12px Arial';
     context.textAlign = 'right';
     context.textBaseline = 'middle';
-    drawShadowedText(context, 740, 400, textToFit, WHITE);
+    let l = getBrightness(col);
+    if (l < 0.7) {
+        drawShadowedText(context, 740, 400, textToFit, WHITE);
+    } else {
+        drawBoldText(context, 740, 400, textToFit, BLACK);
+    }
 }
 
 function Draw() {
@@ -191,11 +209,11 @@ function drawWheel() {
     srcctx.drawImage(wheelBufCanvas, wheelLeft, wheelTop, wheelSize, wheelSize);
 }
 
-function drawShadowedText(ctx, x, y, text, col) {
-    ctx.fillStyle = BLACK;
+function drawShadowedText(ctx, x, y, text, col, scol = BLACK) {
+    ctx.fillStyle = scol;
     ctx.fillText(text, x + 1, y + 1);
     ctx.fillStyle = col;
-    ctx.fillText(text, x - 1, y - 1);
+    ctx.fillText(text, x, y);
 }
 
 function drawBoldText(ctx, x, y, text, col) {
@@ -205,25 +223,27 @@ function drawBoldText(ctx, x, y, text, col) {
 }
 
 function drawQueue() {
-    srcctx.font = '24px Arial';
-    srcctx.textAlign = 'left';
-    srcctx.textBaseline = 'middle';
+    queueCtx.clearRect(0, 0, 800, 800);
+    queueCtx.font = '32px Arial';
+    queueCtx.textAlign = 'left';
+    queueCtx.textBaseline = 'top';
 
-    drawShadowedText(srcctx, 180, 40, "Request Queue:", WHITE);
-    srcctx.textBaseline = 'top';
-    let lineY = 80;
+    drawShadowedText(queueCtx, 40, 0, "Request Queue:", WHITE);
+    let lineY = 40;
     for (let i = 0; i < priorityQueue.length; i++) {
-        drawShadowedText(srcctx, 180, lineY, getFullName(priorityQueue[i]), YELLOW);
-        lineY += 30;
+        drawShadowedText(queueCtx, 40, lineY, getFullName(priorityQueue[i]), YELLOW);
+        lineY += 40;
     }
     for (let i = 0; i < povertyQueue.length; i++) {
-        drawShadowedText(srcctx, 180, lineY, getFullName(povertyQueue[i]), WHITE);
-        lineY += 30;
+        drawShadowedText(queueCtx, 40, lineY, getFullName(povertyQueue[i]), WHITE);
+        lineY += 40;
     }
 
     if (xIndex >= 0) {
-        drawShadowedText(srcctx, 150, 80 + (30 * xIndex), '✖', RED);
+        drawShadowedText(queueCtx, 0, 40 + (40 * xIndex), '✖', RED);
     }
+
+    srcctx.drawImage(queueCanvas, queueLeft, queueTop, queueSize, queueSize);
 }
 
 function drawAddSongToWheelButton() {
@@ -341,8 +361,9 @@ function mouseMoved(e) {
     xIndex = -1;
     let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920; // Relative position in overlay
     let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080; // Relative position in overlay
-    if (mx > 150 && mx < 580 && my > 80) {
-        let queueIndex = Math.floor((my - 80) / 30);
+    let entrySize = queueSize / 20;
+    if (mx > queueLeft && mx < queueLeft + queueSize && my > queueTop + entrySize && my < queueTop + queueSize) {
+        let queueIndex = Math.floor((my - (queueTop + entrySize)) / (entrySize));
         let totalQueueSize = (priorityQueue.length) + (povertyQueue.length);
         if (queueIndex >= totalQueueSize) {
             return;
@@ -352,77 +373,96 @@ function mouseMoved(e) {
 }
 
 function canvasClicked(e) {
+    if (showControls) return; // Don't accidentally handle click events when you're diddling the display
     let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920; // Relative position in overlay
     let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080; // Relative position in overlay
-    if (mx > (960 - 45) && mx < (960 + 45) && my > (540 - 45) && my < (540 + 45)) {
+    if (mx > (wheelLeft + (wheelSize / 2) - (wheelSize / 16)) &&
+        mx < (wheelLeft + (wheelSize / 2) + (wheelSize / 16)) &&
+        my > (wheelTop + (wheelSize / 2) - (wheelSize / 16)) &&
+        my < (wheelTop + (wheelSize / 2) + (wheelSize / 16))) {
         // Wheel spinny button
         if (wheelVelocity == 0 && songlist.length >= 1) {
             spinWheel();
         }
-    } else if (mx > 1820 && my > 980 && mx < 1920 && my < 1080) {
+        return;
+    }
+    if (mx > 1820 && my > 980 && mx < 1920 && my < 1080) {
         // Add song button
         shuffle(otherRandomSongs);
         let songToAdd = otherRandomSongs.splice(0, 1)[0];
         addSong(songToAdd);
-    } else if (mx > 1720 && my > 980 && mx < 1820 && my < 1080) {
+        return;
+    }
+    if (mx > 1720 && my > 980 && mx < 1820 && my < 1080) {
         // Add song button
         shuffle(otherRandomSongs);
         let songToAdd = otherRandomSongs.splice(0, 1)[0];
         if (!tryAddSongToQueue(songToAdd, true)) {
             otherRandomSongs.push(songToAdd);
         }
-    } else if (mx > 1620 && my > 980 && mx < 1720 && my < 1080) {
+        return;
+    }
+    if (mx > 1620 && my > 980 && mx < 1720 && my < 1080) {
         // Add song button
         shuffle(otherRandomSongs);
         let songToAdd = otherRandomSongs.splice(0, 1)[0];
         if (!tryAddSongToQueue(songToAdd)) {
             otherRandomSongs.push(songToAdd);
         }
-    } else if (mx > 150 && mx < 580 && my > 80) {
+        return;
+    }
+    if (mx > queueLeft && mx < queueLeft + queueSize && my > queueTop && my < queueTop + queueSize) {
         // Remove a song from the queue
-        let queueIndex = Math.floor((my - 80) / 30);
+        let entrySize = queueSize / 20;
+        let queueIndex = Math.floor((my - (queueTop + entrySize)) / (entrySize));
         let totalQueueSize = (priorityQueue.length) + (povertyQueue.length);
         if (queueIndex >= totalQueueSize) {
             return;
         }
         if (queueIndex < priorityQueue.length) {
-            if (mx > 180) {
+            if (mx > (queueLeft + entrySize)) {
                 if (playSong(priorityQueue[queueIndex])) {
                     console.log('Played priority song index ' + queueIndex);
                     priorityQueue.splice(queueIndex, 1);
                 } else {
                     console.log("Error removing song from queue!");
                 }
-                return;
+                mouseMoved(e); return;
             } else {
                 console.log('Deleted priority song index ' + queueIndex);
                 priorityQueue.splice(queueIndex, 1);
-                return;
+                mouseMoved(e); return;
             }
         }
         queueIndex -= priorityQueue.length;
-        if (mx > 180) {
+        if (mx > (queueLeft + entrySize)) {
             if (playSong(povertyQueue[queueIndex])) {
                 console.log('Played standard song index ' + queueIndex);
                 povertyQueue.splice(queueIndex, 1);
             } else {
                 console.log("Error removing song from queue!");
             }
+            mouseMoved(e); return;
         } else {
             console.log('Deleted standard song index ' + queueIndex);
             povertyQueue.splice(queueIndex, 1);
+            mouseMoved(e); return;
         }
     }
 }
 
 function playSong(song) {
     const req = new XMLHttpRequest();
-    req.onload = function () {
-        return true;
-    };
-    req.open('GET', APIURL + '/play?sid=' + song.songid);
+    // req.onload = function () {
+    //     return true;
+    // };
+    req.open('GET', APIURL + '/play?sid=' + song.songid, false);
     req.send();
-    return true;
+    if (req.status == 200) {
+        return true;
+    }
+    console.log('Error calling play() on song');
+    return false;
 }
 
 //#region Utils and Helpers
@@ -454,6 +494,38 @@ function DrawScreen() {
     dstctx.drawImage(srcctx.canvas, 0, 0, 1920, 1080, screenOffsetX, screenOffsetY, newWidth, newHeight);
 }
 
+function setWheelSize(e) {
+    wheelSize = Number(e.target.value);
+    if (wheelTop + wheelSize > 1080) {
+        wheelTop = 1080 - wheelSize;
+    }
+    if (wheelLeft + wheelSize > 1920) {
+        wheelLeft = 1920 - wheelSize;
+    }
+    document.getElementById('wheelTop').max = (1080 - wheelSize);
+    document.getElementById('wheelLeft').max = (1920 - wheelSize);
+}
+
+function setWheelTop(e) {
+    wheelTop = Number(e.target.value);
+}
+
+function setWheelLeft(e) {
+    wheelLeft = Number(e.target.value);
+}
+
+function setQueueSize(e) {
+    queueSize = Number(e.target.value);
+}
+
+function setQueueTop(e) {
+    queueTop = Number(e.target.value);
+}
+
+function setQueueLeft(e) {
+    queueLeft = Number(e.target.value);
+}
+
 // OnLoad initialization
 
 window.onload = function () {
@@ -462,6 +534,12 @@ window.onload = function () {
     listen('cbtn', 'click', showHideControls);
     window.addEventListener('click', canvasClicked);
     window.addEventListener('mousemove', mouseMoved);
+    listen('wheelSize', 'input', setWheelSize);
+    listen('wheelTop', 'input', setWheelTop);
+    listen('wheelLeft', 'input', setWheelLeft);
+    listen('queueSize', 'input', setQueueSize);
+    listen('queueTop', 'input', setQueueTop);
+    listen('queueLeft', 'input', setQueueLeft);
     initWheelCanvas();
     resize();
     Update();
@@ -542,6 +620,13 @@ function initCanvases() {
     wheelBufCtx = wheelBufCanvas.getContext('2d');
     wheelBufCtx.fillStyle = TRANSPARENT;
     wheelBufCtx.fillRect(0, 0, 800, 800);
+
+    queueCanvas = document.createElement('canvas');
+    queueCanvas.width = 800;
+    queueCanvas.height = 800;
+    queueCtx = queueCanvas.getContext('2d');
+    queueCtx.fillStyle = TRANSPARENT;
+    queueCtx.fillRect(0, 0, 800, 800);
 }
 
 function shuffle(array) {
@@ -560,6 +645,18 @@ function shuffle(array) {
     }
 
     return array;
+}
+
+function getBrightness(rgbstr) {
+    rgbstr = rgbstr.replace(/^\s*#|\s*$/g, '');
+    if (rgbstr.length == 3) {
+        rgbstr = rgbstr.replace(/(.)/g, '$1$1');
+    }
+    let r = parseInt(rgbstr.substr(0, 2), 16) / 255;
+    let g = parseInt(rgbstr.substr(2, 2), 16) / 255;
+    let b = parseInt(rgbstr.substr(4, 2), 16) / 255;
+    let l = (0.2126 * r + 0.7152 * g + 0.0722 * b);
+    return l;
 }
 
 //#endregion Utils and Helpers

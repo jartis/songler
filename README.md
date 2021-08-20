@@ -11,7 +11,7 @@ Song picker / request tracker / etc for Twitch
 * Choice of different "click" sounds for wheel spin
 * Configuration for wheel palettes / random wheel colors
 * No adjacent wheel slots with matching colors
-* Some way to remove songs from a (non-moving) wheel - an X on the outside?
+* Show selected title on hover (Different from spinner title)
 * Dashboard for configuring your song list
 * Some kind of user/auth system
 * Request security and whatnot
@@ -21,9 +21,14 @@ Song picker / request tracker / etc for Twitch
 * Show requester names in song list? (Checkable option?)
 * Save display configuration
 * Move configurables into central object for jsonification / saving
+* Lock in "config mode" to ignore canvas clicks?
+* Normalize out "Songs" for multiple users
 
 ## Done
 
+* ~~Highlight song slices on hover~~
+* ~~Some way to remove songs from a (non-moving) wheel - an X on the outside?~~
+* ~~Refill button for the wheel~~
 * ~~Make titles on wheel inverse/contrast slice color~~
 * ~~Configuration for request list position/size~~
 * ~~Configuration for wheel position/size~~

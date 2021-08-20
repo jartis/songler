@@ -55,6 +55,8 @@ var lastIndex = 0;
 var wheelLeft = (1920 - 800) / 2;
 var wheelTop = (1080 - 800) / 2;
 var wheelSize = 800;
+var maxWheel = 50;
+var wheelHighlight = -1;
 
 // Set up a drawing target for the request list
 var queueCanvas;
@@ -90,6 +92,7 @@ function addSong(songToAdd) {
 }
 
 function initWheelCanvas() {
+    //wheelRotation = 0;
     let count = songlist.length;
     for (let i = 0; i < count; i++) {
         if (songlist[i].color == undefined) {
@@ -100,7 +103,7 @@ function initWheelCanvas() {
             wheelPaletteIndex %= wheelPalette.length;
         }
         wheelCtx.fillStyle = songlist[i].color;
-        wheelCtx.lineStyle = BLACK;
+        wheelCtx.strokeStyle = BLACK;
         wheelCtx.lineWidth = 2;
 
         let slice = ((360 / count) * (Math.PI / 180));
@@ -120,25 +123,6 @@ function initWheelCanvas() {
         let displayName = /*songlist[i][0] + ' - ' +*/ songlist[i].title;
         drawLabel(wheelCtx, displayName, songlist[i].color);
     }
-}
-
-function boundedRandomColor() {
-    let r = Math.floor(Math.random() * 150) + 50;
-    let g = Math.floor(Math.random() * 150) + 50;
-    let b = Math.floor(Math.random() * 150) + 50;
-    return '#' + r.toString(16) + g.toString(16) + b.toString(16);
-}
-
-function boundedBoldColor() {
-    let color = '#';
-    for (let i = 0; i < 6; i++) {
-        if (Math.random() < 0.5) {
-            color += "2";
-        } else {
-            color += "C";
-        }
-    }
-    return color;
 }
 
 function drawLabel(context, textToFit, col) {
@@ -177,6 +161,28 @@ function drawWheel() {
     wheelBufCtx.translate(-400, -400);
     wheelBufCtx.drawImage(wheelCanvas, 0, 0);
     wheelBufCtx.resetTransform();
+
+    // Draw the highlighted slice
+    if (wheelHighlight > -1) {
+        let slice = ((360 / songlist.length) * (Math.PI / 180));
+        let angle = wheelHighlight * slice;
+        wheelBufCtx.translate(400, 400);
+        wheelBufCtx.rotate((wheelRotation * (Math.PI / 180)) + angle);
+        wheelBufCtx.translate(-400, -400);
+
+        wheelBufCtx.strokeStyle = WHITE;
+        wheelBufCtx.fillStyle = '#FFFF80AA';
+        wheelBufCtx.lineWidth = 8;
+        wheelBufCtx.beginPath();
+        wheelBufCtx.moveTo(400, 400);
+        wheelBufCtx.lineTo(400 + (Math.cos(-slice / 2) * 350), 400 + (Math.sin(-slice / 2) * 350));
+        wheelBufCtx.arc(400, 400, 350, -(slice / 2), slice / 2, false);
+        wheelBufCtx.lineTo(400, 400);
+        wheelBufCtx.fill();
+        wheelBufCtx.stroke();
+
+        wheelBufCtx.resetTransform();
+    }
 
     // Draw the pointer
     wheelBufCtx.fillStyle = BLACK;
@@ -328,6 +334,7 @@ function Update() {
             if (!tryAddSongToQueue(songToAdd)) {
                 songlist.push(songToAdd);
             }
+            initWheelCanvas();
         }
     }
     window.requestAnimationFrame(Update);
@@ -357,10 +364,37 @@ function tryAddSongToQueue(songToAdd, priority = false) {
     }
 }
 
+function distance(x1, y1, x2, y2) {
+    let a = x1 - x2;
+    let b = y1 - y2;
+    let c = Math.sqrt(a * a + b * b);
+    return Math.floor(c);
+}
+
 function mouseMoved(e) {
     xIndex = -1;
     let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920; // Relative position in overlay
     let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080; // Relative position in overlay
+
+    // Check for wheel overlap first
+    if (wheelVelocity == 0) {
+        if (mx > wheelLeft && mx < wheelLeft + wheelSize && my > wheelTop && my < wheelTop + wheelSize) {
+            let wheelCenterX = wheelLeft + (wheelSize / 2);
+            let wheelCenterY = wheelTop + (wheelSize / 2);
+            let d = distance(mx, my, wheelCenterX, wheelCenterY);
+            if (d < (wheelSize * 7 / 16) && d > (wheelSize / 10)) {
+                let posAngle = Math.atan2(wheelCenterY - my, wheelCenterX - mx) * 180 / Math.PI;
+                posAngle -= wheelRotation;
+                while(posAngle < 0) { posAngle += 360; }
+                posAngle %= 360;
+
+                let sliceSize = (360 / songlist.length);
+                wheelHighlight = Math.floor((180 + posAngle + (sliceSize / 2)) / sliceSize);
+                wheelHighlight %= songlist.length;
+            }
+            else { wheelHighlight = -1; }
+        }
+    } else { wheelHighlight = -1; }
     let entrySize = queueSize / 20;
     if (mx > queueLeft && mx < queueLeft + queueSize && my > queueTop + entrySize && my < queueTop + queueSize) {
         let queueIndex = Math.floor((my - (queueTop + entrySize)) / (entrySize));
@@ -373,7 +407,8 @@ function mouseMoved(e) {
 }
 
 function canvasClicked(e) {
-    if (showControls) return; // Don't accidentally handle click events when you're diddling the display
+    // Taking this out for now. Lock in "config mode" to ignore canvas clicks?
+    // if (showControls) return; // Don't accidentally handle click events when you're diddling the display
     let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920; // Relative position in overlay
     let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080; // Relative position in overlay
     if (mx > (wheelLeft + (wheelSize / 2) - (wheelSize / 16)) &&
@@ -384,6 +419,13 @@ function canvasClicked(e) {
         if (wheelVelocity == 0 && songlist.length >= 1) {
             spinWheel();
         }
+        return;
+    }
+    // BEFORE the request list, check if there's a wheel song highlighted, if there is kill it
+    // But only when the wheel isn't spinning!
+    if (wheelHighlight > -1 && wheelVelocity == 0) {
+        songlist.splice(wheelHighlight, 1);
+        initWheelCanvas();
         return;
     }
     if (mx > 1820 && my > 980 && mx < 1920 && my < 1080) {
@@ -526,6 +568,23 @@ function setQueueLeft(e) {
     queueLeft = Number(e.target.value);
 }
 
+function refillWheel(e) {
+    let songsToGet = maxWheel - songlist.length;
+    let curList = [];
+    for (let i = 0; i < songlist.length; i++) {
+        curList.push(Number(songlist[i].songid));
+    }
+
+    const req = new XMLHttpRequest();
+    req.onload = function () {
+        let list = JSON.parse(this.responseText);
+        songlist.push.apply(songlist, list);
+        initWheelCanvas();
+    };
+    req.open('GET', APIURL + '/more?uid=' + USERID + '&count=' + songsToGet + '&list=' + curList);
+    req.send();
+}
+
 // OnLoad initialization
 
 window.onload = function () {
@@ -540,6 +599,7 @@ window.onload = function () {
     listen('queueSize', 'input', setQueueSize);
     listen('queueTop', 'input', setQueueTop);
     listen('queueLeft', 'input', setQueueLeft);
+    listen('wheelRefill', 'click', refillWheel);
     initWheelCanvas();
     resize();
     Update();
@@ -550,9 +610,10 @@ function loadSongs() {
     const req = new XMLHttpRequest();
     req.onload = function () {
         let biglist = JSON.parse(this.responseText);
+        biglist.splice(0, maxWheel*2);
         shuffle(biglist);
-        songlist = biglist.splice(0, 50);
-        otherRandomSongs = biglist.splice(0, 50);
+        songlist = biglist.splice(0, maxWheel);
+        otherRandomSongs = biglist.splice(0, maxWheel);
         shuffle(songlist);
         shuffle(otherRandomSongs);
         initWheelCanvas();

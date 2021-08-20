@@ -23,7 +23,7 @@ def getAllSongs():
     if 'uid' not in request.args:
         return "Error: No User Specified"
     cursor = songlerdb.cursor(dictionary=True)
-    query = 'SELECT * FROM songs WHERE userid = %s ORDER BY lastplayed'
+    query = 'SELECT * FROM songs WHERE userid = %s ORDER BY plays ASC, lastplayed ASC'
     cursor.execute(query, (request.args['uid'],))
     result = cursor.fetchall()
     return jsonify(result)
@@ -44,7 +44,7 @@ def refillSongs():
     nolist = request.args['list']
     count = request.args['count']
     cursor = songlerdb.cursor(dictionary=True)
-    query = 'SELECT * FROM songs WHERE userid = %s AND songid NOT IN (%s) ORDER BY lastplayed LIMIT 50'
+    query = 'SELECT * FROM songs WHERE userid = %s AND songid NOT IN (%s) ORDER BY plays ASC, lastplayed ASC LIMIT 50'
     formatlist = ','.join(map(str, nolist))
     cursor.execute(query, (uid, nolist))
     result = cursor.fetchall()

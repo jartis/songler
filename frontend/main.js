@@ -130,8 +130,8 @@ function drawLabel(context, textToFit, col) {
     context.textAlign = 'right';
     context.textBaseline = 'middle';
     let l = getBrightness(col);
-    if (l < 0.7) {
-        drawShadowedText(context, 740, 400, textToFit, WHITE);
+    if (l < 0.5) {
+        drawBoldText(context, 740, 400, textToFit, WHITE);
     } else {
         drawBoldText(context, 740, 400, textToFit, BLACK);
     }
@@ -378,6 +378,7 @@ function mouseMoved(e) {
 
     // Check for wheel overlap first
     if (wheelVelocity == 0) {
+        wheelHighlight = -1;
         if (mx > wheelLeft && mx < wheelLeft + wheelSize && my > wheelTop && my < wheelTop + wheelSize) {
             let wheelCenterX = wheelLeft + (wheelSize / 2);
             let wheelCenterY = wheelTop + (wheelSize / 2);
@@ -394,7 +395,7 @@ function mouseMoved(e) {
             }
             else { wheelHighlight = -1; }
         }
-    } else { wheelHighlight = -1; }
+    }
     let entrySize = queueSize / 20;
     if (mx > queueLeft && mx < queueLeft + queueSize && my > queueTop + entrySize && my < queueTop + queueSize) {
         let queueIndex = Math.floor((my - (queueTop + entrySize)) / (entrySize));
@@ -610,7 +611,7 @@ function loadSongs() {
     const req = new XMLHttpRequest();
     req.onload = function () {
         let biglist = JSON.parse(this.responseText);
-        biglist.splice(0, maxWheel*2);
+        biglist = biglist.splice(0, maxWheel*2);
         shuffle(biglist);
         songlist = biglist.splice(0, maxWheel);
         otherRandomSongs = biglist.splice(0, maxWheel);

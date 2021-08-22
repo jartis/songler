@@ -23,6 +23,8 @@ Song picker / request tracker / etc for Twitch
 * Move configurables into central object for jsonification / saving
 * Lock in "config mode" to ignore canvas clicks?
 * Normalize out "Songs" for multiple users
+* End-of-session reports (for import to practice trackers?)
+* Based on normalization, "fun reports" like most played artists?
 
 ## Done
 
@@ -51,5 +53,9 @@ Song picker / request tracker / etc for Twitch
 1. Due to the latency of streaming, is websocket-style speed of connection necessary? Would a 30s/1m poll be enough to handle things? Note that this would ABSOLUTELY require an event queue of some kind, but websocket communication "might not".
 1. What do we do to build the initial wheel? How parameterizable should that be? Is the wheel completely optional for the complete overlay? (ie., use the queue(s) without a wheel)
 1. What's the structure for authorization and the assorted streamer/viewer pages? What auth mechanism do I want to use?
+
+## Notes
+
+* I'm currently using UID 1 in my local DB for testing, and UID 2 for my actual tracking
 
    

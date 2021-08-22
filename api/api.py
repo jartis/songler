@@ -62,4 +62,19 @@ def playSong():
     result = cursor.fetchall()
     return jsonify(result)
 
+# 'uid' is the userid for the songs to pull
+# Sorts by IDK (add as a param?)
+# Does not do pagination
+@app.route('/api/v1/getpubsongs', methods=['GET'])
+def getPublicList():
+    if 'uid' not in request.args:
+        return "Error: No user specified"
+    # TODO: Add pagination?
+    uid = request.args['uid']
+    cursor = songlerdb.cursor(dictionary=True)
+    query = 'SELECT songlists.slid, songs.artist, songs.title, songlists.plays, songlists.lastplayed FROM songlists INNER JOIN songs ON songs.sid = songlists.sid WHERE userid = %s AND public = 1'
+    cursor.execute(query, (uid,))
+    result = cursor.fetchall()
+    return jsonify(result)
+
 app.run()

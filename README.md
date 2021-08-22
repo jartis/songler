@@ -27,6 +27,7 @@ Song picker / request tracker / etc for Twitch
 
 ## Done
 
+* ~~API endpoint for public list for user~~
 * ~~Normalize out "Songs" for multiple users~~
 * ~~Highlight song slices on hover~~
 * ~~Some way to remove songs from a (non-moving) wheel - an X on the outside?~~

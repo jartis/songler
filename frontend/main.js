@@ -11,7 +11,9 @@ const RED = '#FF0000';
 const BLUE = '#0000FF';
 const TRANSPARENT = '#00000000';
 
+// DEBUG
 const USERID = 1; // I'm the video game boy! I'm the one who wins!
+// DEBUG
 
 var maxPovertyQueueSize = 100;
 var maxPriorityQueueSize = 100;
@@ -67,6 +69,11 @@ var queueSize = 800;
 
 var REMOVE = 0; // Pull an option after it is selected, on a new spin
 var xIndex = -1;
+
+// Tracking info for "session report"
+var rpt_playedSongs = [];
+var rpt_skippedSongs = [];
+var rpt_startTime = Date.now();
 
 // Noises!
 var clicky = [
@@ -425,6 +432,7 @@ function canvasClicked(e) {
     // BEFORE the request list, check if there's a wheel song highlighted, if there is kill it
     // But only when the wheel isn't spinning!
     if (wheelHighlight > -1 && wheelVelocity == 0) {
+        rpt_skippedSongs.push(songlist[wheelHighlight].slid);
         songlist.splice(wheelHighlight, 1);
         initWheelCanvas();
         return;
@@ -473,6 +481,7 @@ function canvasClicked(e) {
                 mouseMoved(e); return;
             } else {
                 console.log('Deleted priority song index ' + queueIndex);
+                rpt_skippedSongs.push(priorityQueue[queueIndex].slid);
                 priorityQueue.splice(queueIndex, 1);
                 mouseMoved(e); return;
             }
@@ -487,7 +496,9 @@ function canvasClicked(e) {
             }
             mouseMoved(e); return;
         } else {
+
             console.log('Deleted standard song index ' + queueIndex);
+            rpt_skippedSongs.push(povertyQueue[queueIndex].slid);
             povertyQueue.splice(queueIndex, 1);
             mouseMoved(e); return;
         }
@@ -495,6 +506,7 @@ function canvasClicked(e) {
 }
 
 function playSong(song) {
+    rpt_playedSongs.push(song.slid);
     const req = new XMLHttpRequest();
     // req.onload = function () {
     //     return true;
@@ -504,7 +516,7 @@ function playSong(song) {
     if (req.status == 200) {
         return true;
     }
-    console.log('Error calling play() on song');
+    console.log('Error storing song play in DB');
     return false;
 }
 

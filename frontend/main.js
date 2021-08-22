@@ -499,7 +499,7 @@ function playSong(song) {
     // req.onload = function () {
     //     return true;
     // };
-    req.open('GET', APIURL + '/play?sid=' + song.songid, false);
+    req.open('GET', APIURL + '/play?sid=' + song.slid, false);
     req.send();
     if (req.status == 200) {
         return true;

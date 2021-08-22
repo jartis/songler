@@ -23,7 +23,7 @@ def getAllSongs():
     if 'uid' not in request.args:
         return "Error: No User Specified"
     cursor = songlerdb.cursor(dictionary=True)
-    query = 'SELECT * FROM songs WHERE userid = %s ORDER BY plays ASC, lastplayed ASC'
+    query = 'SELECT songlists.slid, songs.artist, songs.title, songlists.plays, songlists.userid FROM songlists INNER JOIN songs ON songs.sid = songlists.sid WHERE userid = %s ORDER BY plays ASC, lastplayed ASC'
     cursor.execute(query, (request.args['uid'],))
     result = cursor.fetchall()
     return jsonify(result)
@@ -44,7 +44,7 @@ def refillSongs():
     nolist = request.args['list']
     count = request.args['count']
     cursor = songlerdb.cursor(dictionary=True)
-    query = 'SELECT * FROM songs WHERE userid = %s AND songid NOT IN (%s) ORDER BY plays ASC, lastplayed ASC LIMIT 50'
+    query = 'SELECT songlists.slid, songs.artist, songs.title, songlists.plays, songlists.userid FROM songlists INNER JOIN songs ON songs.sid = songlists.sid WHERE userid = %s AND slid NOT IN (%s) ORDER BY plays ASC, lastplayed ASC LIMIT 50'
     formatlist = ','.join(map(str, nolist))
     cursor.execute(query, (uid, nolist))
     result = cursor.fetchall()
@@ -57,7 +57,7 @@ def playSong():
         return "Error: No Song Specified"
     songid = request.args['sid']
     cursor = songlerdb.cursor(dictionary=True)
-    query = 'UPDATE songs SET plays = plays + 1, lastplayed = current_date() WHERE songid = %s'
+    query = 'UPDATE songlists SET plays = plays + 1, lastplayed = current_date() WHERE slid = %s'
     cursor.execute(query, (songid,))
     result = cursor.fetchall()
     return jsonify(result)

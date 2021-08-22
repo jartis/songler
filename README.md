@@ -22,12 +22,12 @@ Song picker / request tracker / etc for Twitch
 * Save display configuration
 * Move configurables into central object for jsonification / saving
 * Lock in "config mode" to ignore canvas clicks?
-* Normalize out "Songs" for multiple users
 * End-of-session reports (for import to practice trackers?)
 * Based on normalization, "fun reports" like most played artists?
 
 ## Done
 
+* ~~Normalize out "Songs" for multiple users~~
 * ~~Highlight song slices on hover~~
 * ~~Some way to remove songs from a (non-moving) wheel - an X on the outside?~~
 * ~~Refill button for the wheel~~

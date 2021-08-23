@@ -18,8 +18,12 @@ songlerdb = mysql.connector.connect(
     database="songler"
 )
 
+# 'uid' is the user to get the song(list) for
+# Sorts on plays/lastplayed by default
+
+
 @app.route('/api/v1/songlist', methods=['GET'])
-def getAllSongs():
+def getAllUserSongs():
     if 'uid' not in request.args:
         return "Error: No User Specified"
     cursor = songlerdb.cursor(dictionary=True)
@@ -32,8 +36,10 @@ def getAllSongs():
 # 'uid' is the userid for the songs to pull
 # 'count' is the number of songs to return
 # Sorts by last played date, never and oldest first
+
+
 @app.route('/api/v1/more', methods=['GET'])
-def refillSongs():
+def refillUserSongs():
     if 'list' not in request.args:
         return "Error: No List Specified"
     if 'uid' not in request.args:
@@ -51,6 +57,10 @@ def refillSongs():
     random.shuffle(result)
     return jsonify(result[0:10])
 
+# 'sid' is the **SLID** in songlists to update
+# TODO: Add some form of auth around this
+
+
 @app.route('/api/v1/play', methods=['GET'])
 def playSong():
     if 'sid' not in request.args:
@@ -65,6 +75,8 @@ def playSong():
 # 'uid' is the userid for the songs to pull
 # Sorts by IDK (add as a param?)
 # Does not do pagination
+
+
 @app.route('/api/v1/getpubsongs', methods=['GET'])
 def getPublicList():
     if 'uid' not in request.args:
@@ -76,5 +88,56 @@ def getPublicList():
     cursor.execute(query, (uid,))
     result = cursor.fetchall()
     return jsonify(result)
+
+
+# getRequests: Get the list of outstanding requests for a user
+# uid: the user to get requests for
+# limit: the max number of requests to get/clear TODO
+# TODO: This MUST have authentication since it eats requests!!!!!!!!!!!
+@app.route('/api/v1/getreqs', methods=['GET'])
+def getRequests():
+    if 'uid' not in request.args:
+        return "Error: No User Specified"
+    uid = int(request.args['uid'])
+    limit = 0
+    if 'limit' in request.args:
+        limit = int(request.args['limit'])
+    cursor = songlerdb.cursor(dictionary=True)
+    query = 'SELECT requests.rid, requests.slid, songs.artist, songs.title, requests.prio FROM requests INNER JOIN songlists ON requests.uid = songlists.userid AND requests.slid = songlists.slid INNER JOIN songs on songs.sid = songlists.sid WHERE requests.uid = %s ORDER BY requests.timestamp ASC'
+    cursor.execute(query, (uid,))
+    result = cursor.fetchall()
+    return jsonify(result)
+
+# addRequest: Adds a request for a specific user
+# uid: User to create the request for
+# slid: Specific songlist entry to request
+
+
+@app.route('/api/v1/addreq', methods=['GET'])
+def addRequest():
+    if 'uid' not in request.args:
+        return "Error: No User Specified"
+    uid = int(request.args['uid'])
+    if 'slid' not in request.args:
+        return "Error: No Song Specified"
+    slid = int(request.args['slid'])
+    cursor = songlerdb.cursor(dictionary=True)
+    query = 'INSERT INTO requests (uid, slid, timestamp) VALUES (%s, %s, NOW())'
+    cursor.execute(query, (uid, slid,))
+    result = cursor.fetchall()
+    return jsonify(result)
+
+
+@app.route('/api/v1/removereq', methods=['GET'])
+def removeRequest():
+    if 'rid' not in request.args:
+        return "No dice"
+    rid = int(request.args['rid'])
+    cursor = songlerdb.cursor(dictionary=True)
+    query = 'DELETE FROM requests WHERE rid = %s'
+    cursor.execute(query, (rid,))
+    result = cursor.fetchall()
+    return jsonify(result)
+
 
 app.run()

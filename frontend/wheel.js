@@ -154,8 +154,8 @@ function Draw() {
 
     drawWheel();
     drawAddSongToQueueButton();
-    drawAddSongToWheelButton();
-    drawAddPriorityButton();
+    //drawAddSongToWheelButton();
+    //drawAddPriorityButton();
     drawQueue();
 
     DrawScreen();
@@ -259,19 +259,19 @@ function drawQueue() {
     srcctx.drawImage(queueCanvas, queueLeft, queueTop, queueSize, queueSize);
 }
 
-function drawAddSongToWheelButton() {
-    // Draw an "Add Song" button
-    srcctx.fillStyle = BLACK;
-    srcctx.fillRect(1820, 980, 100, 100);
-    srcctx.font = '16px Arial';
-    srcctx.textAlign = 'center';
-    srcctx.textBaseline = 'middle';
-    srcctx.fillStyle = WHITE;
-    drawBoldText(srcctx, 1870, 1000, 'ADD A', WHITE);
-    drawBoldText(srcctx, 1870, 1020, 'RANDOM', WHITE);
-    drawBoldText(srcctx, 1870, 1040, 'SONG TO', WHITE);
-    drawBoldText(srcctx, 1870, 1060, 'THE WHEEL', WHITE);
-}
+// function drawAddSongToWheelButton() {
+//     // Draw an "Add Song" button
+//     srcctx.fillStyle = BLACK;
+//     srcctx.fillRect(1820, 980, 100, 100);
+//     srcctx.font = '16px Arial';
+//     srcctx.textAlign = 'center';
+//     srcctx.textBaseline = 'middle';
+//     srcctx.fillStyle = WHITE;
+//     drawBoldText(srcctx, 1870, 1000, 'ADD A', WHITE);
+//     drawBoldText(srcctx, 1870, 1020, 'RANDOM', WHITE);
+//     drawBoldText(srcctx, 1870, 1040, 'SONG TO', WHITE);
+//     drawBoldText(srcctx, 1870, 1060, 'THE WHEEL', WHITE);
+// }
 
 function drawAddSongToQueueButton() {
     // Draw an "Add Song" button
@@ -281,25 +281,23 @@ function drawAddSongToQueueButton() {
     srcctx.textAlign = 'center';
     srcctx.textBaseline = 'middle';
     srcctx.fillStyle = WHITE;
-    drawBoldText(srcctx, 1670, 1000, 'ADD A', WHITE);
-    drawBoldText(srcctx, 1670, 1020, 'RANDOM', WHITE);
-    drawBoldText(srcctx, 1670, 1040, 'SONG TO', WHITE);
-    drawBoldText(srcctx, 1670, 1060, 'THE QUEUE', WHITE);
+    drawBoldText(srcctx, 1670, 1020, 'CHECK', WHITE);
+    drawBoldText(srcctx, 1670, 1040, 'REQUESTS', WHITE);
 }
 
-function drawAddPriorityButton() {
-    // Draw an "Add Song" button
-    srcctx.fillStyle = RED;
-    srcctx.fillRect(1720, 980, 100, 100);
-    srcctx.font = '16px Arial';
-    srcctx.textAlign = 'center';
-    srcctx.textBaseline = 'middle';
-    srcctx.fillStyle = WHITE;
-    drawBoldText(srcctx, 1770, 1000, 'ADD A', WHITE);
-    drawBoldText(srcctx, 1770, 1020, 'PRIORITY', WHITE);
-    drawBoldText(srcctx, 1770, 1040, 'SONG TO', WHITE);
-    drawBoldText(srcctx, 1770, 1060, 'THE QUEUE', WHITE);
-}
+// function drawAddPriorityButton() {
+//     // Draw an "Add Song" button
+//     srcctx.fillStyle = RED;
+//     srcctx.fillRect(1720, 980, 100, 100);
+//     srcctx.font = '16px Arial';
+//     srcctx.textAlign = 'center';
+//     srcctx.textBaseline = 'middle';
+//     srcctx.fillStyle = WHITE;
+//     drawBoldText(srcctx, 1770, 1000, 'ADD A', WHITE);
+//     drawBoldText(srcctx, 1770, 1020, 'PRIORITY', WHITE);
+//     drawBoldText(srcctx, 1770, 1040, 'SONG TO', WHITE);
+//     drawBoldText(srcctx, 1770, 1060, 'THE QUEUE', WHITE);
+// }
 
 function drawClickToSpin() {
     wheelBufCtx.font = '24px Arial';
@@ -393,7 +391,7 @@ function mouseMoved(e) {
             if (d < (wheelSize * 7 / 16) && d > (wheelSize / 10)) {
                 let posAngle = Math.atan2(wheelCenterY - my, wheelCenterX - mx) * 180 / Math.PI;
                 posAngle -= wheelRotation;
-                while(posAngle < 0) { posAngle += 360; }
+                while (posAngle < 0) { posAngle += 360; }
                 posAngle %= 360;
 
                 let sliceSize = (360 / songlist.length);
@@ -437,29 +435,25 @@ function canvasClicked(e) {
         initWheelCanvas();
         return;
     }
-    if (mx > 1820 && my > 980 && mx < 1920 && my < 1080) {
-        // Add song button
-        shuffle(otherRandomSongs);
-        let songToAdd = otherRandomSongs.splice(0, 1)[0];
-        addSong(songToAdd);
-        return;
-    }
-    if (mx > 1720 && my > 980 && mx < 1820 && my < 1080) {
-        // Add song button
-        shuffle(otherRandomSongs);
-        let songToAdd = otherRandomSongs.splice(0, 1)[0];
-        if (!tryAddSongToQueue(songToAdd, true)) {
-            otherRandomSongs.push(songToAdd);
-        }
-        return;
-    }
+    // if (mx > 1820 && my > 980 && mx < 1920 && my < 1080) {
+    //     // Add song button
+    //     shuffle(otherRandomSongs);
+    //     let songToAdd = otherRandomSongs.splice(0, 1)[0];
+    //     addSong(songToAdd);
+    //     return;
+    // }
+    // if (mx > 1720 && my > 980 && mx < 1820 && my < 1080) {
+    //     // Add song button
+    //     shuffle(otherRandomSongs);
+    //     let songToAdd = otherRandomSongs.splice(0, 1)[0];
+    //     if (!tryAddSongToQueue(songToAdd, true)) {
+    //         otherRandomSongs.push(songToAdd);
+    //     }
+    //     return;
+    // }
     if (mx > 1620 && my > 980 && mx < 1720 && my < 1080) {
-        // Add song button
-        shuffle(otherRandomSongs);
-        let songToAdd = otherRandomSongs.splice(0, 1)[0];
-        if (!tryAddSongToQueue(songToAdd)) {
-            otherRandomSongs.push(songToAdd);
-        }
+        // Check Requests button
+        getRequests();
         return;
     }
     if (mx > queueLeft && mx < queueLeft + queueSize && my > queueTop && my < queueTop + queueSize) {
@@ -518,6 +512,29 @@ function playSong(song) {
     }
     console.log('Error storing song play in DB');
     return false;
+}
+
+function removeRequest(rid) {
+    const req = new XMLHttpRequest();
+    req.onload = function () { };
+    req.open('GET', APIURL + '/removereq?rid=' + rid);
+    req.send();
+}
+
+function getRequests() {
+    const req = new XMLHttpRequest();
+    req.onload = function () {
+        let reqs = JSON.parse(this.responseText);
+        for (let i = 0; i < reqs.length; i++) {
+            let song = reqs[i];
+            // Add the song to the queue
+            if (tryAddSongToQueue(song, song.prio)) {
+                removeRequest(song.rid);
+            }
+        }
+    };
+    req.open('GET', APIURL + '/getreqs?uid=' + USERID);
+    req.send();
 }
 
 //#region Utils and Helpers
@@ -617,13 +634,14 @@ window.onload = function () {
     resize();
     Update();
     loadSongs();
+    window.setInterval(getRequests, 5000);
 };
 
 function loadSongs() {
     const req = new XMLHttpRequest();
     req.onload = function () {
         let biglist = JSON.parse(this.responseText);
-        biglist = biglist.splice(0, maxWheel*2);
+        biglist = biglist.splice(0, maxWheel * 2);
         shuffle(biglist);
         songlist = biglist.splice(0, maxWheel);
         otherRandomSongs = biglist.splice(0, maxWheel);

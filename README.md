@@ -15,8 +15,6 @@ Song picker / request tracker / etc for Twitch
 * Dashboard for configuring your song list
 * Some kind of user/auth system
 * Request security and whatnot
-* Public display of a user's songlist
-* Request from songlist page
 * "Last Ignored"? Recently ignored songs should creep up less frequently?
 * Show requester names in song list? (Checkable option?)
 * Save display configuration
@@ -24,9 +22,12 @@ Song picker / request tracker / etc for Twitch
 * Lock in "config mode" to ignore canvas clicks?
 * End-of-session reports (for import to practice trackers?)
 * Based on normalization, "fun reports" like most played artists?
+* Add requester info to requests from public page
 
 ## Done
 
+* ~~Public display of a user's songlist~~
+* ~~Request from songlist page~~
 * ~~API endpoint for public list for user~~
 * ~~Normalize out "Songs" for multiple users~~
 * ~~Highlight song slices on hover~~

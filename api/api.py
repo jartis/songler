@@ -27,7 +27,7 @@ def getAllUserSongs():
     if 'uid' not in request.args:
         return "Error: No User Specified"
     cursor = songlerdb.cursor(dictionary=True)
-    query = 'SELECT songlists.slid, songs.artist, songs.title, songlists.plays, songlists.userid FROM songlists INNER JOIN songs ON songs.sid = songlists.sid WHERE userid = %s ORDER BY plays ASC, lastplayed ASC'
+    query = 'SELECT songlists.slid, songs.artist, songs.title, songlists.public, songlists.plays, songlists.userid, songlists.lastplayed FROM songlists INNER JOIN songs ON songs.sid = songlists.sid WHERE userid = %s ORDER BY plays ASC, lastplayed ASC'
     cursor.execute(query, (request.args['uid'],))
     result = cursor.fetchall()
     return jsonify(result)
@@ -139,5 +139,30 @@ def removeRequest():
     result = cursor.fetchall()
     return jsonify(result)
 
+@app.route('/api/v1/addsong', methods=['POST'])
+def addSong():
+    songtitle = request.json['title']
+    songartist = request.json['artist']
+    public = int(request.json['pub'])
+    uid = int(request.json['uid'])
+    sid = findSong(songartist, songtitle)
+    cursor = songlerdb.cursor(dictionary=True)
+    query = 'INSERT INTO songlists (userid, sid, public) VALUES (%s, %s, %s)'
+    cursor.execute(query, (uid, sid, public,))
+    result = cursor.fetchall()
+    return jsonify(result)
+
+def findSong(artist, title):
+    cursor = songlerdb.cursor()
+    query = 'SELECT sid FROM songs WHERE artist = %s AND title = %s'
+    cursor.execute(query, (artist, title,))
+    result = cursor.fetchall()
+    if (len(result) == 0):
+        query = 'INSERT INTO songs (artist, title) VALUES(%s, %s)'
+        cursor.execute(query, (artist, title,))
+        query = 'SELECT sid FROM songs WHERE artist = %s AND title = %s'
+        cursor.execute(query, (artist, title,))
+        result = cursor.fetchall()
+    return result[0]
 
 app.run()

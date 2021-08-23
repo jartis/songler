@@ -12,7 +12,6 @@ Song picker / request tracker / etc for Twitch
 * Configuration for wheel palettes / random wheel colors
 * No adjacent wheel slots with matching colors
 * Show selected title on hover (Different from spinner title)
-* Dashboard for configuring your song list
 * Some kind of user/auth system
 * Request security and whatnot
 * "Last Ignored"? Recently ignored songs should creep up less frequently?
@@ -23,9 +22,18 @@ Song picker / request tracker / etc for Twitch
 * End-of-session reports (for import to practice trackers?)
 * Based on normalization, "fun reports" like most played artists?
 * Add requester info to requests from public page
+* Don't refill wheel with played or ignored songs from this session
+* Lock header rows when scrolling songlist
+* Edit songs from list
+* Paginate song dashboard / public lists?
+* Error handling for adding song
+* Check if song exists on songlist already
+* Serve this shiz up someplace public!
 
 ## Done
 
+* ~~Add new songs to list~~
+* ~~Dashboard for configuring your song list~~
 * ~~Public display of a user's songlist~~
 * ~~Request from songlist page~~
 * ~~API endpoint for public list for user~~

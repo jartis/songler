@@ -26,9 +26,12 @@ Song picker / request tracker / etc for Twitch
 * Lock header rows when scrolling songlist
 * Edit songs from list
 * Paginate song dashboard / public lists?
-* Error handling for adding song
-* Check if song exists on songlist already
+* Error handling for adding song that is already on user's songlist
+* Error handling for adding song if the server catches fire
 * Serve this shiz up someplace public!
+* Normalize "songs" to "artists" and "titles" separately?
+* Toggleable wheel visibility?
+* Keyboard shortcuts?
 
 ## Done
 
@@ -61,11 +64,11 @@ Song picker / request tracker / etc for Twitch
 ## Questions
 
 1. Due to the latency of streaming, is websocket-style speed of connection necessary? Would a 30s/1m poll be enough to handle things? Note that this would ABSOLUTELY require an event queue of some kind, but websocket communication "might not".
-1. What do we do to build the initial wheel? How parameterizable should that be? Is the wheel completely optional for the complete overlay? (ie., use the queue(s) without a wheel)
-1. What's the structure for authorization and the assorted streamer/viewer pages? What auth mechanism do I want to use?
+  * Right now, the wheel polls on a 5 second timer. I will probably increase that time, and go with a poll instead of something immediate like websockets - if I'm already streaming, even though it's a tiny connection... although WS is pub/sub so it would send heartbeats but only a payload if there WAS a payload. Merits further debate.
+2. What do we do to build the initial wheel? How parameterizable should that be? Is the wheel completely optional for the complete overlay? (ie., use the queue(s) without a wheel)
+  * I think making the wheel visibility toggle-able is a good call, so you can have the queue without the wheel, or turn it on-and-off on the fly. Queue visibility is kind of necessary, though, IMHO. Keyboard shortcuts for enable/disable wheel?
+3. What's the structure for authorization and the assorted streamer/viewer pages? What auth mechanism do I want to use?
 
 ## Notes
 
 * I'm currently using UID 1 in my local DB for testing, and UID 2 for my actual tracking
-
-   

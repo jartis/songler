@@ -27,7 +27,12 @@ def getAllUserSongs():
     if 'uid' not in request.args:
         return "Error: No User Specified"
     cursor = songlerdb.cursor(dictionary=True)
-    query = 'SELECT songlists.slid, songs.artist, songs.title, songlists.public, songlists.plays, songlists.userid, songlists.lastplayed FROM songlists INNER JOIN songs ON songs.sid = songlists.sid WHERE userid = %s ORDER BY plays ASC, lastplayed ASC'
+    query =  'SELECT songlists.slid, artists.artist, titles.title, songlists.public, songlists.plays, '
+    query += 'songlists.userid, songlists.lastplayed FROM songlists '
+    query += 'INNER JOIN songs ON songs.sid = songlists.sid '
+    query += 'INNER JOIN artists ON artists.aid = songs.artist '
+    query += 'INNER JOIN titles ON titles.tid = songs.title '
+    query += 'WHERE userid = %s ORDER BY plays ASC, lastplayed ASC'
     cursor.execute(query, (request.args['uid'],))
     result = cursor.fetchall()
     return jsonify(result)
@@ -50,7 +55,11 @@ def refillUserSongs():
     nolist = request.args['list']
     count = request.args['count']
     cursor = songlerdb.cursor(dictionary=True)
-    query = 'SELECT songlists.slid, songs.artist, songs.title, songlists.plays, songlists.userid FROM songlists INNER JOIN songs ON songs.sid = songlists.sid WHERE userid = %s AND slid NOT IN (%s) ORDER BY plays ASC, lastplayed ASC LIMIT 50'
+    query =  'SELECT songlists.slid, artists.artist, titles.title, songlists.plays, songlists.userid '
+    query += 'FROM songlists INNER JOIN songs ON songs.sid = songlists.sid '
+    query += 'INNER JOIN artists ON artists.aid = songs.artist '
+    query += 'INNER JOIN titles ON titles.tid = songs.title '
+    query += 'WHERE userid = %s AND slid NOT IN (%s) ORDER BY plays ASC, lastplayed ASC LIMIT 50'
     formatlist = ','.join(map(str, nolist))
     cursor.execute(query, (uid, nolist))
     result = cursor.fetchall()
@@ -84,7 +93,11 @@ def getPublicList():
     # TODO: Add pagination?
     uid = request.args['uid']
     cursor = songlerdb.cursor(dictionary=True)
-    query = 'SELECT songlists.slid, songs.artist, songs.title, songlists.plays, songlists.lastplayed FROM songlists INNER JOIN songs ON songs.sid = songlists.sid WHERE userid = %s AND public = 1'
+    query =  'SELECT songlists.slid, artists.artist, titles.title, songlists.plays, songlists.lastplayed '
+    query += 'FROM songlists INNER JOIN songs ON songs.sid = songlists.sid '
+    query += 'INNER JOIN artists ON songs.artist = artists.aid '
+    query += 'INNER JOIN titles ON songs.title = titles.tid '
+    query += 'WHERE userid = %s AND public = 1'
     cursor.execute(query, (uid,))
     result = cursor.fetchall()
     return jsonify(result)
@@ -103,7 +116,11 @@ def getRequests():
     if 'limit' in request.args:
         limit = int(request.args['limit'])
     cursor = songlerdb.cursor(dictionary=True)
-    query = 'SELECT requests.rid, requests.slid, songs.artist, songs.title, requests.prio FROM requests INNER JOIN songlists ON requests.uid = songlists.userid AND requests.slid = songlists.slid INNER JOIN songs on songs.sid = songlists.sid WHERE requests.uid = %s ORDER BY requests.timestamp ASC'
+    query =  'SELECT requests.rid, requests.slid, artists.artist, titles.title, requests.prio '
+    query += 'FROM requests INNER JOIN songlists ON requests.uid = songlists.userid '
+    query += 'AND requests.slid = songlists.slid INNER JOIN songs on songs.sid = songlists.sid '
+    query += 'INNER JOIN titles on songs.title = titles.tid INNER JOIN artists on artists.aid = songs.artist '
+    query += 'WHERE requests.uid = %s ORDER BY requests.timestamp ASC'
     cursor.execute(query, (uid,))
     result = cursor.fetchall()
     return jsonify(result)
@@ -153,16 +170,35 @@ def addSong():
     return jsonify(result)
 
 def findSong(artist, title):
+    aid = -1
+    tid = -1
     cursor = songlerdb.cursor()
-    query = 'SELECT sid FROM songs WHERE artist = %s AND title = %s'
-    cursor.execute(query, (artist, title,))
+    # Artist ID
+    query = 'SELECT aid FROM artists WHERE artist = %s'
+    cursor.execute(query, (artist,))
     result = cursor.fetchall()
-    if (len(result) == 0):
-        query = 'INSERT INTO songs (artist, title) VALUES(%s, %s)'
-        cursor.execute(query, (artist, title,))
-        query = 'SELECT sid FROM songs WHERE artist = %s AND title = %s'
-        cursor.execute(query, (artist, title,))
+    if (len(result) == 0): # Artist Doesn't exist
+        query = 'INSERT INTO artists (artist) VALUES (%s)'
+        cursor.execute(query, (artist,))
         result = cursor.fetchall()
+    aid = result[0]
+    # Title ID
+    query = 'SELECT tid FROM titles WHERE title = %s'
+    cursor.execute(query, (title,))
+    result = cursor.fetchall()
+    if (len(result) == 0): # Title Doesn't exist
+        query = 'INSERT INTO titles (title) VALUES (%s)'
+        cursor.execute(query, (title,))
+        result = cursor.fetchall()
+    tid = result[0]
+    # Actual Song ID
+    query = 'SELECT sid FROM songs WHERE artist = %s AND title = %s'
+    cursor.execute(query, (aid, tid,))
+    result = cursor.fetchall()
+    if (len(result) == 0): # SONG doesn't exist
+        query = 'INSERT INTO songs (artist, title) VALUES (%s, %s)'
+        cursor.execute(query, (aid, tid,))
+        result = cursor.fetchall()        
     return result[0]
 
 app.run()

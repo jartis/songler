@@ -29,12 +29,12 @@ Song picker / request tracker / etc for Twitch
 * Error handling for adding song that is already on user's songlist
 * Error handling for adding song if the server catches fire
 * Serve this shiz up someplace public!
-* Normalize "songs" to "artists" and "titles" separately?
 * Toggleable wheel visibility?
 * Keyboard shortcuts?
 
 ## Done
 
+* ~~Normalize "songs" to "artists" and "titles" separately?~~
 * ~~Add new songs to list~~
 * ~~Dashboard for configuring your song list~~
 * ~~Public display of a user's songlist~~

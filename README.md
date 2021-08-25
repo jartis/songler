@@ -1,6 +1,12 @@
 # Songler
 Song picker / request tracker / etc for Twitch
 
+## Keyboard shortcuts
+
+`W` - Show/hide the song wheel
+`R` - Show/hide the request queue
+`C` - Show/hide the control panel
+
 ## Todo
 
 * Request add Sources: Chat (bits), donations (Streamlabs integration), uhhh other things?
@@ -17,23 +23,25 @@ Song picker / request tracker / etc for Twitch
 * "Last Ignored"? Recently ignored songs should creep up less frequently?
 * Show requester names in song list? (Checkable option?)
 * Save display configuration
-* Move configurables into central object for jsonification / saving
 * Lock in "config mode" to ignore canvas clicks?
 * End-of-session reports (for import to practice trackers?)
 * Based on normalization, "fun reports" like most played artists?
 * Add requester info to requests from public page
-* Don't refill wheel with played or ignored songs from this session
 * Lock header rows when scrolling songlist
 * Edit songs from list
 * Paginate song dashboard / public lists?
 * Error handling for adding song that is already on user's songlist
 * Error handling for adding song if the server catches fire
 * Serve this shiz up someplace public!
-* Toggleable wheel visibility?
-* Keyboard shortcuts?
+* LocalStorage / DB Storage of display prefs
 
 ## Done
 
+* ~~Keyboard shortcuts?~~
+* ~~Don't refill wheel with played or ignored songs from this session~~
+* ~~Toggleable queue visibility~~
+* ~~Toggleable wheel visibility?~~
+* ~~Move configurables into central object for jsonification / saving~~
 * ~~Normalize "songs" to "artists" and "titles" separately?~~
 * ~~Add new songs to list~~
 * ~~Dashboard for configuring your song list~~

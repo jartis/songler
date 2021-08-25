@@ -13,37 +13,51 @@ const TRANSPARENT = '#00000000';
 
 // DEBUG
 const USERID = 1; // I'm the video game boy! I'm the one who wins!
+const LISTENING = false;
 // DEBUG
 
-var maxPovertyQueueSize = 100;
-var maxPriorityQueueSize = 100;
-var maxTotalQueueSize = 100;
+// SAVEABLE config object!
+var config = {
+    version: 1,
 
-var wheelPalette = [
-    '#3333FF',
-    '#333333',
-    '#FFFF33',
-    '#33FF33',
-    '#FF33FF',
-    '#FF3333',
-    '#33FFFF',
-];
+    maxPovertyQueueSize: 100,
+    maxPriorityQueueSize: 100,
+    maxTotalQueueSize: 100,
+
+    wheelLeft: (1920 - 800) / 2,
+    wheelTop: (1080 - 800) / 2,
+    wheelSize: 800,
+    wheelVisible: true,
+
+    queueLeft: 150,
+    queueTop: 20,
+    queueSize: 800,
+    queueVisible: true,
+
+    wheelPalette: [
+        '#3333FF',
+        '#333333',
+        '#FFFF33',
+        '#33FF33',
+        '#FF33FF',
+        '#FF3333',
+        '#33FFFF',
+    ],
+};
+
 var wheelPaletteIndex = 0;
 
 var songlist = [
     {
-        'artist': 'artist',
-        'title': 'title',
+        'artist': '',
+        'title': 'LOADING',
         'color': '#808080',
     }
 ];
 
-var otherRandomSongs = [
-];
-
+// Queue and associated display objs
 var povertyQueue = [];
 var priorityQueue = [];
-var curWheelTitle = '';
 
 // Set up a drawing target for the wheel
 var wheelCanvas;
@@ -54,21 +68,15 @@ var wheelRotation = 0;
 var wheelVelocity = 0;
 var songIndex = 0;
 var lastIndex = 0;
-var wheelLeft = (1920 - 800) / 2;
-var wheelTop = (1080 - 800) / 2;
-var wheelSize = 800;
 var maxWheel = 50;
 var wheelHighlight = -1;
+var curWheelTitle = '';
 
 // Set up a drawing target for the request list
 var queueCanvas;
 var queueCtx;
-var queueLeft = 150;
-var queueTop = 20;
-var queueSize = 800;
 
-var REMOVE = 0; // Pull an option after it is selected, on a new spin
-var xIndex = -1;
+var songQueuePosIndex = -1;
 
 // Tracking info for "session report"
 var rpt_playedSongs = [];
@@ -103,11 +111,11 @@ function initWheelCanvas() {
     let count = songlist.length;
     for (let i = 0; i < count; i++) {
         if (songlist[i].color == undefined) {
-            songlist[i].color = wheelPalette[wheelPaletteIndex];
+            songlist[i].color = config.wheelPalette[wheelPaletteIndex];
             wheelPaletteIndex++;
             if (Math.random() > 0.5) wheelPaletteIndex++;
             if (Math.random() > 0.5) wheelPaletteIndex++;
-            wheelPaletteIndex %= wheelPalette.length;
+            wheelPaletteIndex %= config.wheelPalette.length;
         }
         wheelCtx.fillStyle = songlist[i].color;
         wheelCtx.strokeStyle = BLACK;
@@ -152,11 +160,13 @@ function Draw() {
     wheelBufCtx.fillStyle = TRANSPARENT;
     wheelBufCtx.clearRect(0, 0, 800, 800);
 
-    drawWheel();
+    if (config.wheelVisible) {
+        drawWheel();
+    }
     drawAddSongToQueueButton();
-    //drawAddSongToWheelButton();
-    //drawAddPriorityButton();
-    drawQueue();
+    if (config.queueVisible) {
+        drawQueue();
+    }
 
     DrawScreen();
 }
@@ -219,7 +229,7 @@ function drawWheel() {
     drawShadowedText(wheelBufCtx, 400, 775, curWheelTitle, WHITE);
 
     // Then blurp it out to the src canvas
-    srcctx.drawImage(wheelBufCanvas, wheelLeft, wheelTop, wheelSize, wheelSize);
+    srcctx.drawImage(wheelBufCanvas, config.wheelLeft, config.wheelTop, config.wheelSize, config.wheelSize);
 }
 
 function drawShadowedText(ctx, x, y, text, col, scol = BLACK) {
@@ -252,26 +262,12 @@ function drawQueue() {
         lineY += 40;
     }
 
-    if (xIndex >= 0) {
-        drawShadowedText(queueCtx, 0, 40 + (40 * xIndex), '✖', RED);
+    if (songQueuePosIndex >= 0) {
+        drawShadowedText(queueCtx, 0, 40 + (40 * songQueuePosIndex), '✖', RED);
     }
 
-    srcctx.drawImage(queueCanvas, queueLeft, queueTop, queueSize, queueSize);
+    srcctx.drawImage(queueCanvas, config.queueLeft, config.queueTop, config.queueSize, config.queueSize);
 }
-
-// function drawAddSongToWheelButton() {
-//     // Draw an "Add Song" button
-//     srcctx.fillStyle = BLACK;
-//     srcctx.fillRect(1820, 980, 100, 100);
-//     srcctx.font = '16px Arial';
-//     srcctx.textAlign = 'center';
-//     srcctx.textBaseline = 'middle';
-//     srcctx.fillStyle = WHITE;
-//     drawBoldText(srcctx, 1870, 1000, 'ADD A', WHITE);
-//     drawBoldText(srcctx, 1870, 1020, 'RANDOM', WHITE);
-//     drawBoldText(srcctx, 1870, 1040, 'SONG TO', WHITE);
-//     drawBoldText(srcctx, 1870, 1060, 'THE WHEEL', WHITE);
-// }
 
 function drawAddSongToQueueButton() {
     // Draw an "Add Song" button
@@ -284,20 +280,6 @@ function drawAddSongToQueueButton() {
     drawBoldText(srcctx, 1670, 1020, 'CHECK', WHITE);
     drawBoldText(srcctx, 1670, 1040, 'REQUESTS', WHITE);
 }
-
-// function drawAddPriorityButton() {
-//     // Draw an "Add Song" button
-//     srcctx.fillStyle = RED;
-//     srcctx.fillRect(1720, 980, 100, 100);
-//     srcctx.font = '16px Arial';
-//     srcctx.textAlign = 'center';
-//     srcctx.textBaseline = 'middle';
-//     srcctx.fillStyle = WHITE;
-//     drawBoldText(srcctx, 1770, 1000, 'ADD A', WHITE);
-//     drawBoldText(srcctx, 1770, 1020, 'PRIORITY', WHITE);
-//     drawBoldText(srcctx, 1770, 1040, 'SONG TO', WHITE);
-//     drawBoldText(srcctx, 1770, 1060, 'THE QUEUE', WHITE);
-// }
 
 function drawClickToSpin() {
     wheelBufCtx.font = '24px Arial';
@@ -351,16 +333,16 @@ function getFullName(song) {
 
 function tryAddSongToQueue(songToAdd, priority = false) {
     if (priority) {
-        if (priorityQueue.length < maxPriorityQueueSize &&
-            (priorityQueue.length + povertyQueue.length < maxTotalQueueSize)) {
+        if (priorityQueue.length < config.maxPriorityQueueSize &&
+            (priorityQueue.length + povertyQueue.length < config.maxTotalQueueSize)) {
             priorityQueue.push(songToAdd);
             return true;
         } else {
             return false;
         }
     } else {
-        if (povertyQueue.length < maxPovertyQueueSize &&
-            (priorityQueue.length + povertyQueue.length < maxTotalQueueSize)) {
+        if (povertyQueue.length < config.maxPovertyQueueSize &&
+            (priorityQueue.length + povertyQueue.length < config.maxTotalQueueSize)) {
             povertyQueue.push(songToAdd);
             return true;
         } else {
@@ -377,124 +359,127 @@ function distance(x1, y1, x2, y2) {
 }
 
 function mouseMoved(e) {
-    xIndex = -1;
+    songQueuePosIndex = -1;
     let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920; // Relative position in overlay
     let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080; // Relative position in overlay
 
     // Check for wheel overlap first
-    if (wheelVelocity == 0) {
-        wheelHighlight = -1;
-        if (mx > wheelLeft && mx < wheelLeft + wheelSize && my > wheelTop && my < wheelTop + wheelSize) {
-            let wheelCenterX = wheelLeft + (wheelSize / 2);
-            let wheelCenterY = wheelTop + (wheelSize / 2);
-            let d = distance(mx, my, wheelCenterX, wheelCenterY);
-            if (d < (wheelSize * 7 / 16) && d > (wheelSize / 10)) {
-                let posAngle = Math.atan2(wheelCenterY - my, wheelCenterX - mx) * 180 / Math.PI;
-                posAngle -= wheelRotation;
-                while (posAngle < 0) { posAngle += 360; }
-                posAngle %= 360;
+    if (config.wheelVisible) {
+        if (wheelVelocity == 0) {
+            wheelHighlight = -1;
+            if (mx > config.wheelLeft && mx < config.wheelLeft + config.wheelSize &&
+                my > config.wheelTop && my < config.wheelTop + config.wheelSize) {
+                let wheelCenterX = config.wheelLeft + (config.wheelSize / 2);
+                let wheelCenterY = config.wheelTop + (config.wheelSize / 2);
+                let d = distance(mx, my, wheelCenterX, wheelCenterY);
+                if (d < (config.wheelSize * 7 / 16) && d > (config.wheelSize / 10)) {
+                    let posAngle = Math.atan2(wheelCenterY - my, wheelCenterX - mx) * 180 / Math.PI;
+                    posAngle -= wheelRotation;
+                    while (posAngle < 0) { posAngle += 360; }
+                    posAngle %= 360;
 
-                let sliceSize = (360 / songlist.length);
-                wheelHighlight = Math.floor((180 + posAngle + (sliceSize / 2)) / sliceSize);
-                wheelHighlight %= songlist.length;
+                    let sliceSize = (360 / songlist.length);
+                    wheelHighlight = Math.floor((180 + posAngle + (sliceSize / 2)) / sliceSize);
+                    wheelHighlight %= songlist.length;
+                }
+                else { wheelHighlight = -1; }
             }
-            else { wheelHighlight = -1; }
         }
     }
-    let entrySize = queueSize / 20;
-    if (mx > queueLeft && mx < queueLeft + queueSize && my > queueTop + entrySize && my < queueTop + queueSize) {
-        let queueIndex = Math.floor((my - (queueTop + entrySize)) / (entrySize));
-        let totalQueueSize = (priorityQueue.length) + (povertyQueue.length);
-        if (queueIndex >= totalQueueSize) {
-            return;
+
+    if (config.queueVisible) {
+        let entrySize = config.queueSize / 20;
+        if (mx > config.queueLeft && mx < config.queueLeft + config.queueSize &&
+            my > config.queueTop + entrySize && my < config.queueTop + config.queueSize) {
+            let queueIndex = Math.floor((my - (config.queueTop + entrySize)) / (entrySize));
+            let totalQueueSize = (priorityQueue.length) + (povertyQueue.length);
+            if (queueIndex >= totalQueueSize) {
+                return;
+            }
+            songQueuePosIndex = queueIndex;
         }
-        xIndex = queueIndex;
     }
 }
 
 function canvasClicked(e) {
     // Taking this out for now. Lock in "config mode" to ignore canvas clicks?
     // if (showControls) return; // Don't accidentally handle click events when you're diddling the display
+
     let mx = ((e.clientX - screenOffsetX) / (newWidth)) * 1920; // Relative position in overlay
     let my = ((e.clientY - screenOffsetY) / (newHeight)) * 1080; // Relative position in overlay
-    if (mx > (wheelLeft + (wheelSize / 2) - (wheelSize / 16)) &&
-        mx < (wheelLeft + (wheelSize / 2) + (wheelSize / 16)) &&
-        my > (wheelTop + (wheelSize / 2) - (wheelSize / 16)) &&
-        my < (wheelTop + (wheelSize / 2) + (wheelSize / 16))) {
-        // Wheel spinny button
-        if (wheelVelocity == 0 && songlist.length >= 1) {
-            spinWheel();
+
+    // Wheel events:
+    if (config.wheelVisible) {
+        // Wheel spin button
+        if (mx > (config.wheelLeft + (config.wheelSize / 2) - (config.wheelSize / 16)) &&
+            mx < (config.wheelLeft + (config.wheelSize / 2) + (config.wheelSize / 16)) &&
+            my > (config.wheelTop + (config.wheelSize / 2) - (config.wheelSize / 16)) &&
+            my < (config.wheelTop + (config.wheelSize / 2) + (config.wheelSize / 16))) {
+            // Wheel spinny button
+            if (wheelVelocity == 0 && songlist.length >= 1) {
+                spinWheel();
+            }
+            return;
         }
-        return;
+        // BEFORE the request list, check if there's a wheel song highlighted, if there is kill it
+        // But only when the wheel isn't spinning!
+        if (wheelHighlight > -1 && wheelVelocity == 0) {
+            rpt_skippedSongs.push(songlist[wheelHighlight].slid);
+            songlist.splice(wheelHighlight, 1);
+            initWheelCanvas();
+            return;
+        }
     }
-    // BEFORE the request list, check if there's a wheel song highlighted, if there is kill it
-    // But only when the wheel isn't spinning!
-    if (wheelHighlight > -1 && wheelVelocity == 0) {
-        rpt_skippedSongs.push(songlist[wheelHighlight].slid);
-        songlist.splice(wheelHighlight, 1);
-        initWheelCanvas();
-        return;
-    }
-    // if (mx > 1820 && my > 980 && mx < 1920 && my < 1080) {
-    //     // Add song button
-    //     shuffle(otherRandomSongs);
-    //     let songToAdd = otherRandomSongs.splice(0, 1)[0];
-    //     addSong(songToAdd);
-    //     return;
-    // }
-    // if (mx > 1720 && my > 980 && mx < 1820 && my < 1080) {
-    //     // Add song button
-    //     shuffle(otherRandomSongs);
-    //     let songToAdd = otherRandomSongs.splice(0, 1)[0];
-    //     if (!tryAddSongToQueue(songToAdd, true)) {
-    //         otherRandomSongs.push(songToAdd);
-    //     }
-    //     return;
-    // }
+
+    // Arbitrary "Debug" Button
     if (mx > 1620 && my > 980 && mx < 1720 && my < 1080) {
         // Check Requests button
         getRequests();
         return;
     }
-    if (mx > queueLeft && mx < queueLeft + queueSize && my > queueTop && my < queueTop + queueSize) {
-        // Remove a song from the queue
-        let entrySize = queueSize / 20;
-        let queueIndex = Math.floor((my - (queueTop + entrySize)) / (entrySize));
-        let totalQueueSize = (priorityQueue.length) + (povertyQueue.length);
-        if (queueIndex >= totalQueueSize) {
-            return;
-        }
-        if (queueIndex < priorityQueue.length) {
-            if (mx > (queueLeft + entrySize)) {
-                if (playSong(priorityQueue[queueIndex])) {
-                    console.log('Played priority song index ' + queueIndex);
+
+    if (config.queueVisible) {
+        if (mx > config.queueLeft && mx < config.queueLeft + config.queueSize &&
+            my > config.queueTop && my < config.queueTop + config.queueSize) {
+            // Remove a song from the queue
+            let entrySize = config.queueSize / 20;
+            let queueIndex = Math.floor((my - (config.queueTop + entrySize)) / (entrySize));
+            let totalQueueSize = (priorityQueue.length) + (povertyQueue.length);
+            if (queueIndex >= totalQueueSize) {
+                return;
+            }
+            if (queueIndex < priorityQueue.length) {
+                if (mx > (config.queueLeft + entrySize)) {
+                    if (playSong(priorityQueue[queueIndex])) {
+                        console.log('Played priority song index ' + queueIndex);
+                        priorityQueue.splice(queueIndex, 1);
+                    } else {
+                        console.log("Error removing song from queue!");
+                    }
+                    mouseMoved(e); return;
+                } else {
+                    console.log('Deleted priority song index ' + queueIndex);
+                    rpt_skippedSongs.push(priorityQueue[queueIndex].slid);
                     priorityQueue.splice(queueIndex, 1);
+                    mouseMoved(e); return;
+                }
+            }
+            queueIndex -= priorityQueue.length;
+            if (mx > (config.queueLeft + entrySize)) {
+                if (playSong(povertyQueue[queueIndex])) {
+                    console.log('Played standard song index ' + queueIndex);
+                    povertyQueue.splice(queueIndex, 1);
                 } else {
                     console.log("Error removing song from queue!");
                 }
                 mouseMoved(e); return;
             } else {
-                console.log('Deleted priority song index ' + queueIndex);
-                rpt_skippedSongs.push(priorityQueue[queueIndex].slid);
-                priorityQueue.splice(queueIndex, 1);
+
+                console.log('Deleted standard song index ' + queueIndex);
+                rpt_skippedSongs.push(povertyQueue[queueIndex].slid);
+                povertyQueue.splice(queueIndex, 1);
                 mouseMoved(e); return;
             }
-        }
-        queueIndex -= priorityQueue.length;
-        if (mx > (queueLeft + entrySize)) {
-            if (playSong(povertyQueue[queueIndex])) {
-                console.log('Played standard song index ' + queueIndex);
-                povertyQueue.splice(queueIndex, 1);
-            } else {
-                console.log("Error removing song from queue!");
-            }
-            mouseMoved(e); return;
-        } else {
-
-            console.log('Deleted standard song index ' + queueIndex);
-            rpt_skippedSongs.push(povertyQueue[queueIndex].slid);
-            povertyQueue.splice(queueIndex, 1);
-            mouseMoved(e); return;
         }
     }
 }
@@ -567,42 +552,58 @@ function DrawScreen() {
 }
 
 function setWheelSize(e) {
-    wheelSize = Number(e.target.value);
-    if (wheelTop + wheelSize > 1080) {
-        wheelTop = 1080 - wheelSize;
+    config.wheelSize = Number(e.target.value);
+    if (config.wheelTop + config.wheelSize > 1080) {
+        config.wheelTop = 1080 - config.wheelSize;
     }
-    if (wheelLeft + wheelSize > 1920) {
-        wheelLeft = 1920 - wheelSize;
+    if (config.wheelLeft + config.wheelSize > 1920) {
+        config.wheelLeft = 1920 - config.wheelSize;
     }
-    document.getElementById('wheelTop').max = (1080 - wheelSize);
-    document.getElementById('wheelLeft').max = (1920 - wheelSize);
+    document.getElementById('wheelTop').max = (1080 - config.wheelSize);
+    document.getElementById('wheelLeft').max = (1920 - config.wheelSize);
 }
 
 function setWheelTop(e) {
-    wheelTop = Number(e.target.value);
+    config.wheelTop = Number(e.target.value);
 }
 
 function setWheelLeft(e) {
-    wheelLeft = Number(e.target.value);
+    config.wheelLeft = Number(e.target.value);
 }
 
 function setQueueSize(e) {
-    queueSize = Number(e.target.value);
+    config.queueSize = Number(e.target.value);
 }
 
 function setQueueTop(e) {
-    queueTop = Number(e.target.value);
+    config.queueTop = Number(e.target.value);
 }
 
 function setQueueLeft(e) {
-    queueLeft = Number(e.target.value);
+    config.queueLeft = Number(e.target.value);
+}
+
+function toggleWheelVis(e) {
+    config.wheelVisible = !config.wheelVisible;
+    document.getElementById('wheelVis').checked = config.wheelVisible;
+}
+
+function toggleQueueVis(e) {
+    config.queueVisible = !config.queueVisible;
+    document.getElementById('queueVis').checked = config.queueVisible;
 }
 
 function refillWheel(e) {
     let songsToGet = maxWheel - songlist.length;
     let curList = [];
     for (let i = 0; i < songlist.length; i++) {
-        curList.push(Number(songlist[i].songid));
+        curList.push(Number(songlist[i].slid));
+    }
+    for (let i = 0; i < rpt_playedSongs.length; i++) {
+        curList.push(Number(rpt_playedSongs[i]));
+    }
+    for (let i = 0; i < rpt_skippedSongs.length; i++) {
+        curList.push(Number(rpt_skippedSongs[i]));
     }
 
     const req = new XMLHttpRequest();
@@ -615,14 +616,36 @@ function refillWheel(e) {
     req.send();
 }
 
+function handleKeys(e) {
+    switch(e.code) {
+        case 'KeyW':
+            toggleWheelVis();
+            break;
+        case 'KeyR':
+            toggleQueueVis();
+            break;
+        case 'KeyC':
+            showHideControls();
+            break;
+        default:
+            break;
+    }
+}
+
 // OnLoad initialization
 
 window.onload = function () {
     initCanvases();
+    initWheelCanvas();
+    resize();
+    Update();
+    loadSongs();
+
     window.addEventListener('resize', resize);
-    listen('cbtn', 'click', showHideControls);
     window.addEventListener('click', canvasClicked);
     window.addEventListener('mousemove', mouseMoved);
+    window.addEventListener('keydown', handleKeys);
+    listen('cbtn', 'click', showHideControls);
     listen('wheelSize', 'input', setWheelSize);
     listen('wheelTop', 'input', setWheelTop);
     listen('wheelLeft', 'input', setWheelLeft);
@@ -630,11 +653,11 @@ window.onload = function () {
     listen('queueTop', 'input', setQueueTop);
     listen('queueLeft', 'input', setQueueLeft);
     listen('wheelRefill', 'click', refillWheel);
-    initWheelCanvas();
-    resize();
-    Update();
-    loadSongs();
-    window.setInterval(getRequests, 5000);
+    listen('wheelVis', 'input', toggleWheelVis);
+
+    if (LISTENING) {
+        window.setInterval(getRequests, 15000);
+    }
 };
 
 function loadSongs() {
@@ -644,9 +667,7 @@ function loadSongs() {
         biglist = biglist.splice(0, maxWheel * 2);
         shuffle(biglist);
         songlist = biglist.splice(0, maxWheel);
-        otherRandomSongs = biglist.splice(0, maxWheel);
         shuffle(songlist);
-        shuffle(otherRandomSongs);
         initWheelCanvas();
     };
     req.open('GET', APIURL + '/songlist?uid=' + USERID);

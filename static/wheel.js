@@ -1,8 +1,5 @@
 // Here's a crappy sample songlist while I test things out
 
-// FOR DEBUGGING:
-const APIURL = 'http://127.0.0.1:5000/api/v1';
-
 const BLACK = '#000000';
 const WHITE = '#FFFFFF';
 const GREEN = '#008800';

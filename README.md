@@ -41,15 +41,15 @@ Song picker / request tracker / etc for Twitch
 * Search options for finding an artist or a song
 * Center search box in navbar somehow? (It moves based on username length)
 * Personal profile
-* Link Twitch account
+* Link Twitch account to existing account
 * Link streamlabs account?
 * Sort songlist displays by column headers
-* User Registration
 * Password strength on user registration page
 * Public profile pages? (Or links to pages in search)
 
 ## Done
 
+* ~~New User Registration~~
 * ~~Some kind of user/auth system~~
 * ~~Keyboard shortcuts?~~
 * ~~Don't refill wheel with played or ignored songs from this session~~

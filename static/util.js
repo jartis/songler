@@ -1,3 +1,5 @@
+const APIURL = 'http://127.0.0.1:5000/api/v1';
+
 function makeToast(cat, msg) {
     let toastid = 'toast' + Math.floor(Math.random() * 256).toString(16);
     let toast = '<div class="toast" id="' + toastid + '" role="alert" aria-live="assertive" aria-atomic="true">';

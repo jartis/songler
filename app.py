@@ -27,21 +27,22 @@ bcrypt = Bcrypt(app)
 oauth = OAuth()
 
 twitchoauth = oauth.remote_app('twitch',
-                          base_url='https://api.twitch.tv/kraken/',
-                          request_token_url=None,
-                          access_token_method='POST',
-                          access_token_url='https://api.twitch.tv/kraken/oauth2/token',
-                          authorize_url='https://api.twitch.tv/kraken/oauth2/authorize',
-                          consumer_key=twitchClientId, # get at: https://www.twitch.tv/kraken/oauth2/clients/new
-                          consumer_secret=twitchSecret,
-                          request_token_params={'scope': ["user_read"]}
-                          )
+                               base_url='https://api.twitch.tv/kraken/',
+                               request_token_url=None,
+                               access_token_method='POST',
+                               access_token_url='https://api.twitch.tv/kraken/oauth2/token',
+                               authorize_url='https://api.twitch.tv/kraken/oauth2/authorize',
+                               consumer_key=twitchClientId,
+                               consumer_secret=twitchSecret,
+                               request_token_params={'scope': ["user_read"]}
+                               )
 
 twitchclient = TwitchClient(client_id=twitchClientId)
 
 #############
 # SeCuRiTy! #
 #############
+
 
 @app.before_request
 def before_request():
@@ -53,6 +54,7 @@ def before_request():
         g.loggedin = True
         g.uid = session['uid']
 
+
 @twitchoauth.tokengetter
 def get_twitch_token(token=None):
     return session.get('twitch_token')
@@ -62,21 +64,30 @@ def get_twitch_token(token=None):
 ######################
 
 # Login page
+
+
 @app.route('/login')
 def renderLogin():
     return render_template('login.jinja')
 # Main user page
+
+@app.route('/newuser')
+def newuser():
+    return render_template('newuser.jinja')
+
+
 @app.route('/')
 @app.route('/home')
 def renderHome():
-    return render_template('home.jinja',username=g.username,loggedIn=g.loggedin)
+    return render_template('home.jinja', username=g.username, loggedIn=g.loggedin)
 
-@app.route('/songlist/<user>', methods=['GET',])
+
+@app.route('/songlist/<user>', methods=['GET', ])
 def showSongList(user):
     user = str(user)
     cursor = db.connection.cursor()
     query = 'SELECT uid FROM users WHERE username = %s'
-    cursor.execute(query,[user,])
+    cursor.execute(query, [user, ])
     row = cursor.fetchone()
     if row is not None:
         uid = int(row['uid'])
@@ -88,20 +99,35 @@ def showSongList(user):
 # Authentication / User #
 #########################
 
-@app.route('/api/authenticate', methods=['POST',])
+@app.route('/adduser', methods=['POST',])
+def addUser():
+    username = request.form['username']
+    password = request.form['password']
+    email = request.form['email']
+    uid = addNewUser(username, bcrypt.generate_password_hash(password), email)
+    session['username'] = username
+    session['loggedIn'] = True
+    session['uid'] = uid
+    return redirect(url_for('renderHome'))
+
+@app.route('/authenticate', methods=['POST', ])
 def authenticate():
     username = request.form['username']
-    password = request.form['password']   
+    password = request.form['password']
 
     cursor = db.connection.cursor()
-    query = 'SELECT username, password, uid FROM users WHERE username = %s'
-    cursor.execute(query,[username,])
+    query = 'SELECT username, password, uid FROM users WHERE username = %s OR email = %s'
+    cursor.execute(query, [username, username, ])
     user = cursor.fetchone()
+    if user['password'] == '':
+        flash('Your account was created by logging in with Twitch. Try logging in there and changing your password in your profile settings, if you wish to log in with a username and password here.')
+        return render_template('login.jinja')
+        
     temp = user['password']
 
     if len(user) > 0:
-        session.pop('username',None)
-        if (bcrypt.check_password_hash(temp,password)) == True:  
+        session.pop('username', None)
+        if (bcrypt.check_password_hash(temp, password)) == True:
             session['username'] = request.form['username']
             session['loggedIn'] = True
             session['uid'] = user['uid']
@@ -110,9 +136,11 @@ def authenticate():
             flash('Invalid Username or Password !!')
             return render_template('login.jinja')
 
+
 @app.route('/tlogin')
 def login():
     return twitchoauth.authorize(callback=url_for('authorized', _external=True))
+
 
 @app.route('/tlogin/authorized')
 def authorized():
@@ -123,7 +151,8 @@ def authorized():
             request.args['error_description']
         )
     #session['twitch_token'] = (resp['access_token'], '')
-    twitchclient = TwitchHelix(client_id=twitchClientId, oauth_token=resp['access_token'])
+    twitchclient = TwitchHelix(
+        client_id=twitchClientId, oauth_token=resp['access_token'])
     twitchuser = twitchclient.get_users()
     username = twitchuser[0]['display_name']
     uid = twitchuser[0]['id']
@@ -131,16 +160,17 @@ def authorized():
     # Okay, if this user doesn't exist in our database yet, let's add them!
     cursor = db.connection.cursor()
     query = 'SELECT uid FROM users WHERE uid = %s'
-    cursor.execute(query,[uid,])
+    cursor.execute(query, [uid, ])
     row = cursor.fetchone()
     if row is None:
-        addUser(username, 'twitch', email, uid)
+        addNewUser(username, '', email, uid)
 
     # Set the session whatsits and let's rock!
     session['uid'] = uid
     session['loggedIn'] = True
     session['username'] = username
     return redirect(url_for('renderHome'))
+
 
 @app.route('/logout')
 def logout():
@@ -151,6 +181,28 @@ def logout():
 ####################
 # Actual API calls #
 ####################
+
+@app.route('/api/v1/checkuser/<user>', methods=['GET',])
+def checkuser(user):
+    user = str(user).replace('%', '\%').replace('_','\_')
+    cursor = db.connection.cursor()
+    query = 'SELECT uid FROM users WHERE username LIKE %s'
+    cursor.execute(query, [user,])
+    row=cursor.fetchone()
+    if row is not None:
+        return '1'
+    return '0';
+
+@app.route('/api/v1/checkemail/<email>', methods=['GET',])
+def checkemail(email):
+    email = str(email).replace('%', '\%').replace('_','\_')
+    cursor = db.connection.cursor()
+    query = 'SELECT uid FROM users WHERE email LIKE %s'
+    cursor.execute(query, [email,])
+    row=cursor.fetchone()
+    if row is not None:
+        return '1'
+    return '0';
 
 # 'uid' is the user to get the song(list) for
 # Sorts on plays/lastplayed by default
@@ -312,17 +364,24 @@ def addSong():
 # Helper functions #
 ####################
 
-def addUser(username, password, email, uid = -1):
+
+def addNewUser(username, password, email, uid=-1):
     cursor = db.connection.cursor()
     if uid == -1:
+        # Create a Username/Password user
         query = 'INSERT INTO users (username, password, email) VALUES (%s, %s, %s)'
         cursor.execute(query, (username, password, email,))
         result = cursor.fetchall()
     else:
-        query = 'INSERT INTO users (uid, username, password, email) VALUES (%s, %s, %s, %s)'
+        # Create a Twitch-based user
+        query = 'INSERT INTO users (uid, username, password, email, twitch) VALUES (%s, %s, %s, %s, 1)'
         cursor.execute(query, (uid, username, password, email,))
         result = cursor.fetchall()
-    return True
+    query = 'SELECT uid FROM users WHERE username LIKE %s'
+    cursor.execute(query, (username,))
+    row = cursor.fetchone()
+    return int(row['uid'])
+
 
 def findOrAddSong(artist, title):
     aid = -1
@@ -349,7 +408,7 @@ def findOrAddSong(artist, title):
         db.connection.commit()
         cursor.execute(query, (title,))
         query = 'SELECT tid FROM titles WHERE title = %s'
-        cursor.execute(query, (title,))        
+        cursor.execute(query, (title,))
         result = cursor.fetchall()
     tid = int(result[0]['tid'])
     # Actual Song ID
@@ -361,9 +420,10 @@ def findOrAddSong(artist, title):
         cursor.execute(query, (aid, tid,))
         db.connection.commit()
         query = 'SELECT sid FROM songs WHERE artist = %s AND title = %s'
-        cursor.execute(query, (aid, tid,))        
+        cursor.execute(query, (aid, tid,))
         result = cursor.fetchall()
     return result[0]['sid']
+
 
 if __name__ == '__main__':
     app.run()

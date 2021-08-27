@@ -1,8 +1,3 @@
-// DEBUG
-const USERID = 1;
-const APIURL = 'http://127.0.0.1:5000/api/v1';
-// DEBUG
-
 var songlist = []; // Holder for everything we get back
 
 window.onload = function () {
@@ -11,7 +6,13 @@ window.onload = function () {
         songlist = JSON.parse(this.responseText);
         writeSongList();
     };
-    req.open('GET', APIURL + '/getpubsongs?uid=' + USERID);
+    if (uid == listuid) {
+        // Get ALL the songs for onesself.
+        // TODO: Mark this somehow
+        req.open('GET', APIURL + '/allsongs/' + uid);
+    } else {
+        req.open('GET', APIURL + '/getpubsongs?uid=' + listuid);
+    }
     req.send();
 };
 
@@ -29,7 +30,7 @@ function writeSongList() {
         tblHtml += '<td>' + song.artist.toString() + '</td>';
         tblHtml += '<td>' + song.title.toString() + '</td>';
         tblHtml += '<td class="text-center">' + song.plays.toString() + '</td>';
-        tblHtml += '<td>' + song.lastplayed.toString() + '</td>';
+        tblHtml += '<td>' + (song.lastplayed == null ? 'Never' : song.lastplayed.toString()) + '</td>';
         tblHtml += '<td><button data-artist="' + song.artist.toString() + '" data-title="' + song.title.toString() + '" data-id="' + song.slid + '" onclick="reqSong(this)">Request This Song</button></td>';
         tblHtml += '</tr>';
     }
@@ -45,6 +46,6 @@ function reqSong(e) {
     req.onload = function () {
         makeToast('Request', 'Your request for ' + title + ' by ' + artist + ' has been placed!');
     };
-    req.open('GET', APIURL + '/addreq?uid=' + USERID + '&slid=' + slid);
+    req.open('GET', APIURL + '/addreq?slid=' + slid);
     req.send();
 }

@@ -43,9 +43,9 @@ canvas {
     font-size: xx-large;
 }
 
-/* .fullbt{
+.fullbt{
     background-color: rgba(150, 140, 130, 0.6);
-} */
+}
 
 .fullbt:hover{
     background-color: rgba(200, 190, 180, 0.6);

@@ -46,6 +46,8 @@ Song picker / request tracker / etc for Twitch
 * Sort songlist displays by column headers
 * Password strength on user registration page
 * Public profile pages? (Or links to pages in search)
+* Toggle in userinfo (?) to only show wheel option if you, y'know, have a wheel / songlist
+* Add toggle for "wheel-able" songs, separate from public
 
 ## Done
 

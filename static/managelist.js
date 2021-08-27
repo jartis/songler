@@ -1,8 +1,3 @@
-// DEBUG
-const USERID = 1;
-const APIURL = 'http://127.0.0.1:5000/api/v1';
-// DEBUG
-
 var songlist = []; // Holder for everything we get back
 
 window.onload = function () {
@@ -16,12 +11,12 @@ function loadList() {
         songlist = JSON.parse(this.responseText);
         writeSongList();
     };
-    req.open('GET', APIURL + '/songlist?uid=' + USERID);
+    req.open('GET', APIURL + '/allsongs/' + uid);
     req.send();
 }
 
 function writeSongList() {
-    let tblHtml = '<table class="table table-striped table-dark"><thead><tr>';
+    let tblHtml = '<table class="table table-striped"><thead><tr>';
     tblHtml += '<th>Artist</th>';
     tblHtml += '<th>Title</th>';
     tblHtml += '<th>Play Count</th>';
@@ -36,10 +31,10 @@ function writeSongList() {
         tblHtml += '<td>' + song.title.toString() + '</td>';
         tblHtml += '<td class="text-center">' + song.plays.toString() + '</td>';
         tblHtml += '<td>' + (song.lastplayed || "Never").toString() + '</td>';
-        tblHtml += '<td><input type="checkbox" disabled ';
+        tblHtml += '<td><input type="checkbox" ';
         if (song.public) { tblHtml += 'checked '; }
         tblHtml += '/></td>';
-        tblHtml += '<td><button data-id="' + song.slid + '" onclick="reqSong(this)">Edit Song</button></td>';
+        tblHtml += '<td><button data-id="' + song.slid + '" onclick="editSong(this)">Edit Song</button></td>';
         tblHtml += '</tr>';
     }
     tblHtml += '<td colspan=5></td><td><button onclick="addSong(this)">Add Song</button></td>';
@@ -53,7 +48,7 @@ function saveSong(e) {
         title: $('#songtitle').val(),
         artist: $('#songartist').val(),
         pub: published ? 1 : 0,
-        uid: USERID,
+        uid: uid,
     };
 
     $.ajax({
@@ -73,7 +68,8 @@ function saveSong(e) {
     });
 }
 
-function reqSong(e) {
+/*
+function editSong(e) {
     let slid = e.getAttribute('data-id');
     const req = new XMLHttpRequest();
     req.onload = function () {
@@ -82,9 +78,9 @@ function reqSong(e) {
     req.open('GET', APIURL + '/addreq?uid=' + USERID + '&slid=' + slid);
     req.send();
 }
+*/
 
 function addSong(e) {
-    console.log("Not yet...");
     $('#addSongModal').modal('show');
 }
 

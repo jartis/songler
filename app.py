@@ -47,7 +47,7 @@ twitchclient = TwitchClient(client_id=twitchClientId)
 @app.before_request
 def before_request():
     g.username = None
-    g.uid = None
+    g.uid = 0
     g.loggedin = False
     if 'username' in session:
         g.username = session['username']
@@ -71,9 +71,17 @@ def renderLogin():
     return render_template('login.jinja')
 # Main user page
 
+
 @app.route('/newuser')
 def newuser():
     return render_template('newuser.jinja')
+
+
+@app.route('/wheel')
+def renderWheel():
+    if g.uid is None:
+        return render_template('error.jinja', error=("You must be logged in to view your overlay"))
+    return render_template('wheel.jinja', userid=g.uid, username=g.username, loggedIn=g.loggedin)
 
 
 @app.route('/')
@@ -86,20 +94,29 @@ def renderHome():
 def showSongList(user):
     user = str(user)
     cursor = db.connection.cursor()
-    query = 'SELECT uid FROM users WHERE username = %s'
+    query = 'SELECT uid FROM users WHERE username LIKE %s'
     cursor.execute(query, [user, ])
     row = cursor.fetchone()
     if row is not None:
         uid = int(row['uid'])
-        return render_template('requestlist.jinja', uid=uid, user=user)
+        return render_template('requestlist.jinja', uid=g.uid, listuid=uid, listuser=user, username=g.username, loggedIn=g.loggedin)
     else:
-        return render_template('error.jinja', error=("No user found with the name " + user))
+        return render_template('error.jinja', error=("No user found with the name " + user), username=g.username, loggedIn=g.loggedin)
+
+@app.route('/managelist', methods=['GET', ])
+def manageSongList():
+    if int(g.uid) > 0:
+        return render_template('managelist.jinja', uid=g.uid, username=g.username, loggedIn=g.loggedin)
+    else:
+        return render_template('error.jinja', error=("No songlist found for user " + g.username), username=g.username, loggedIn=g.loggedin)
+
 
 #########################
 # Authentication / User #
 #########################
 
-@app.route('/adduser', methods=['POST',])
+
+@app.route('/adduser', methods=['POST', ])
 def addUser():
     username = request.form['username']
     password = request.form['password']
@@ -109,6 +126,7 @@ def addUser():
     session['loggedIn'] = True
     session['uid'] = uid
     return redirect(url_for('renderHome'))
+
 
 @app.route('/authenticate', methods=['POST', ])
 def authenticate():
@@ -121,8 +139,8 @@ def authenticate():
     user = cursor.fetchone()
     if user['password'] == '':
         flash('Your account was created by logging in with Twitch. Try logging in there and changing your password in your profile settings, if you wish to log in with a username and password here.')
-        return render_template('login.jinja')
-        
+        return render_template('login.jinja', username=g.username, loggedIn=g.loggedin)
+
     temp = user['password']
 
     if len(user) > 0:
@@ -133,8 +151,8 @@ def authenticate():
             session['uid'] = user['uid']
             return redirect(url_for('renderHome'))
         else:
-            flash('Invalid Username or Password !!')
-            return render_template('login.jinja')
+            flash('Invalid Username or Password')
+            return render_template('login.jinja', username=g.username, loggedIn=g.loggedin)
 
 
 @app.route('/tlogin')
@@ -176,42 +194,46 @@ def authorized():
 def logout():
     session.pop('twitch_token', None)
     session.clear()
+    g.username = None
+    g.uid = None
+    g.loggedin = False
     return render_template('home.jinja')
 
 ####################
 # Actual API calls #
 ####################
 
-@app.route('/api/v1/checkuser/<user>', methods=['GET',])
+
+@app.route('/api/v1/checkuser/<user>', methods=['GET', ])
 def checkuser(user):
-    user = str(user).replace('%', '\%').replace('_','\_')
+    user = str(user).replace('%', '\%').replace('_', '\_')
     cursor = db.connection.cursor()
     query = 'SELECT uid FROM users WHERE username LIKE %s'
-    cursor.execute(query, [user,])
-    row=cursor.fetchone()
+    cursor.execute(query, [user, ])
+    row = cursor.fetchone()
     if row is not None:
         return '1'
-    return '0';
+    return '0'
 
-@app.route('/api/v1/checkemail/<email>', methods=['GET',])
+
+@app.route('/api/v1/checkemail/<email>', methods=['GET', ])
 def checkemail(email):
-    email = str(email).replace('%', '\%').replace('_','\_')
+    email = str(email).replace('%', '\%').replace('_', '\_')
     cursor = db.connection.cursor()
     query = 'SELECT uid FROM users WHERE email LIKE %s'
-    cursor.execute(query, [email,])
-    row=cursor.fetchone()
+    cursor.execute(query, [email, ])
+    row = cursor.fetchone()
     if row is not None:
         return '1'
-    return '0';
+    return '0'
 
 # 'uid' is the user to get the song(list) for
 # Sorts on plays/lastplayed by default
 
 
-@app.route('/api/v1/songlist', methods=['GET'])
-def getAllUserSongs():
-    if 'uid' not in request.args:
-        return "Error: No User Specified"
+@app.route('/api/v1/allsongs/<uid>', methods=['GET'])
+def getAllUserSongs(uid):
+    uid = int(uid)
     cursor = db.connection.cursor()
     query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.public, songlists.plays, '
     query += 'songlists.userid, songlists.lastplayed FROM songlists '
@@ -219,7 +241,7 @@ def getAllUserSongs():
     query += 'INNER JOIN artists ON artists.aid = songs.artist '
     query += 'INNER JOIN titles ON titles.tid = songs.title '
     query += 'WHERE userid = %s ORDER BY plays ASC, lastplayed ASC'
-    cursor.execute(query, (request.args['uid'],))
+    cursor.execute(query, (uid,))
     result = cursor.fetchall()
     return jsonify(result)
 
@@ -303,10 +325,12 @@ def getRequests():
     if 'limit' in request.args:
         limit = int(request.args['limit'])
     cursor = db.connection.cursor()
-    query = 'SELECT requests.rid, requests.slid, artists.artist, titles.title, requests.prio '
+    query = 'SELECT requests.rid, requests.slid, users.username, artists.artist, titles.title, requests.prio '
     query += 'FROM requests INNER JOIN songlists ON requests.uid = songlists.userid '
     query += 'AND requests.slid = songlists.slid INNER JOIN songs ON songs.sid = songlists.sid '
-    query += 'INNER JOIN titles ON songs.title = titles.tid INNER JOIN artists ON artists.aid = songs.artist '
+    query += 'INNER JOIN titles ON songs.title = titles.tid '
+    query += 'INNER JOIN artists ON artists.aid = songs.artist '
+    query += 'LEFT JOIN users ON requests.ruid = users.uid '
     query += 'WHERE requests.uid = %s ORDER BY requests.timestamp ASC'
     cursor.execute(query, (uid,))
     result = cursor.fetchall()
@@ -319,15 +343,18 @@ def getRequests():
 
 @app.route('/api/v1/addreq', methods=['GET'])
 def addRequest():
-    if 'uid' not in request.args:
-        return "Error: No User Specified"
-    uid = int(request.args['uid'])
+    ruid = 0
+    if g.uid is not None:
+        ruid = g.uid
     if 'slid' not in request.args:
         return "Error: No Song Specified"
     slid = int(request.args['slid'])
     cursor = db.connection.cursor()
-    query = 'INSERT INTO requests (uid, slid, timestamp) VALUES (%s, %s, NOW())'
-    cursor.execute(query, (uid, slid,))
+    query = 'INSERT INTO requests (uid, ruid, slid, timestamp) '
+    query += 'SELECT userid, %s, slid, NOW() FROM songlists '
+    query += 'WHERE slid = %s'
+
+    cursor.execute(query, (ruid, slid,))
     db.connection.commit()
     result = cursor.fetchall()
     return jsonify(result)

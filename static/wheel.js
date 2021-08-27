@@ -9,7 +9,6 @@ const BLUE = '#0000FF';
 const TRANSPARENT = '#00000000';
 
 // DEBUG
-const USERID = 1; // I'm the video game boy! I'm the one who wins!
 const LISTENING = false;
 // DEBUG
 
@@ -244,23 +243,43 @@ function drawBoldText(ctx, x, y, text, col) {
 
 function drawQueue() {
     queueCtx.clearRect(0, 0, 800, 800);
-    queueCtx.font = '32px Arial';
+    queueCtx.font = '16px Arial';
     queueCtx.textAlign = 'left';
     queueCtx.textBaseline = 'top';
 
-    drawShadowedText(queueCtx, 40, 0, "Request Queue:", WHITE);
-    let lineY = 40;
+    drawShadowedText(queueCtx, 20, 0, "Artist / Title", WHITE);
+    drawShadowedText(queueCtx, 600, 0, "Requested by", WHITE);
+    let lineY = 20;
+    queueCtx.save();
+    queueCtx.beginPath();
+    queueCtx.rect(20, 0, 550, 800);
+    queueCtx.clip();
     for (let i = 0; i < priorityQueue.length; i++) {
-        drawShadowedText(queueCtx, 40, lineY, getFullName(priorityQueue[i]), YELLOW);
-        lineY += 40;
+        drawShadowedText(queueCtx, 20, lineY, getFullName(priorityQueue[i]), YELLOW);
+        lineY += 20;
     }
     for (let i = 0; i < povertyQueue.length; i++) {
-        drawShadowedText(queueCtx, 40, lineY, getFullName(povertyQueue[i]), WHITE);
-        lineY += 40;
+        drawShadowedText(queueCtx, 20, lineY, getFullName(povertyQueue[i]), WHITE);
+        lineY += 20;
     }
+    queueCtx.restore();
+    lineY = 20;
+    queueCtx.save();
+    queueCtx.beginPath();
+    queueCtx.rect(600, 0, 200, 800);
+    queueCtx.clip();
+    for (let i = 0; i < priorityQueue.length; i++) {
+        drawShadowedText(queueCtx, 600, lineY, priorityQueue[i].username, YELLOW);
+        lineY += 20;
+    }
+    for (let i = 0; i < povertyQueue.length; i++) {
+        drawShadowedText(queueCtx, 600, lineY, povertyQueue[i].username, WHITE);
+        lineY += 20;
+    }
+    queueCtx.restore();
 
     if (songQueuePosIndex >= 0) {
-        drawShadowedText(queueCtx, 0, 40 + (40 * songQueuePosIndex), '✖', RED);
+        drawShadowedText(queueCtx, 0, 20 + (20 * songQueuePosIndex), '✖', RED);
     }
 
     srcctx.drawImage(queueCanvas, config.queueLeft, config.queueTop, config.queueSize, config.queueSize);
@@ -315,6 +334,7 @@ function Update() {
             wheelVelocity = 0;
             chime.play();
             let songToAdd = songlist.splice(songIndex, 1)[0];
+            songToAdd.username = 'Random';
             if (!tryAddSongToQueue(songToAdd)) {
                 songlist.push(songToAdd);
             }
@@ -385,7 +405,7 @@ function mouseMoved(e) {
     }
 
     if (config.queueVisible) {
-        let entrySize = config.queueSize / 20;
+        let entrySize = config.queueSize / 40;
         if (mx > config.queueLeft && mx < config.queueLeft + config.queueSize &&
             my > config.queueTop + entrySize && my < config.queueTop + config.queueSize) {
             let queueIndex = Math.floor((my - (config.queueTop + entrySize)) / (entrySize));
@@ -439,7 +459,7 @@ function canvasClicked(e) {
         if (mx > config.queueLeft && mx < config.queueLeft + config.queueSize &&
             my > config.queueTop && my < config.queueTop + config.queueSize) {
             // Remove a song from the queue
-            let entrySize = config.queueSize / 20;
+            let entrySize = config.queueSize / 40;
             let queueIndex = Math.floor((my - (config.queueTop + entrySize)) / (entrySize));
             let totalQueueSize = (priorityQueue.length) + (povertyQueue.length);
             if (queueIndex >= totalQueueSize) {
@@ -509,13 +529,16 @@ function getRequests() {
         let reqs = JSON.parse(this.responseText);
         for (let i = 0; i < reqs.length; i++) {
             let song = reqs[i];
+            if (song.username == null) {
+                song.username = 'Anonymous';
+            }
             // Add the song to the queue
             if (tryAddSongToQueue(song, song.prio)) {
                 removeRequest(song.rid);
             }
         }
     };
-    req.open('GET', APIURL + '/getreqs?uid=' + USERID);
+    req.open('GET', APIURL + '/getreqs?uid=' + uid);
     req.send();
 }
 
@@ -609,7 +632,7 @@ function refillWheel(e) {
         songlist.push.apply(songlist, list);
         initWheelCanvas();
     };
-    req.open('GET', APIURL + '/more?uid=' + USERID + '&count=' + songsToGet + '&list=' + curList);
+    req.open('GET', APIURL + '/more?uid=' + uid + '&count=' + songsToGet + '&list=' + curList);
     req.send();
 }
 
@@ -667,7 +690,7 @@ function loadSongs() {
         shuffle(songlist);
         initWheelCanvas();
     };
-    req.open('GET', APIURL + '/songlist?uid=' + USERID);
+    req.open('GET', APIURL + '/allsongs/' + uid);
     req.send();
 }
 

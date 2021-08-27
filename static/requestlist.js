@@ -16,7 +16,7 @@ window.onload = function () {
 };
 
 function writeSongList() {
-    let tblHtml = '<table class="table table-striped table-dark"><thead><tr>';
+    let tblHtml = '<table class="table table-striped"><thead><tr>';
     tblHtml += '<th>Artist</th>';
     tblHtml += '<th>Title</th>';
     tblHtml += '<th>Play Count</th>';
@@ -30,7 +30,7 @@ function writeSongList() {
         tblHtml += '<td>' + song.title.toString() + '</td>';
         tblHtml += '<td class="text-center">' + song.plays.toString() + '</td>';
         tblHtml += '<td>' + song.lastplayed.toString() + '</td>';
-        tblHtml += '<td><button data-id="' + song.slid + '" onclick="reqSong(this)">Request This Song</button></td>';
+        tblHtml += '<td><button data-artist="' + song.artist.toString() + '" data-title="' + song.title.toString() + '" data-id="' + song.slid + '" onclick="reqSong(this)">Request This Song</button></td>';
         tblHtml += '</tr>';
     }
     tblHtml += '</tbody></table>';
@@ -39,9 +39,11 @@ function writeSongList() {
 
 function reqSong(e) {
     let slid = e.getAttribute('data-id');
+    let artist = e.getAttribute('data-artist');
+    let title = e.getAttribute('data-title');
     const req = new XMLHttpRequest();
     req.onload = function () {
-        alert("Aight");
+        makeToast('Request', 'Your request for ' + title + ' by ' + artist + ' has been placed!');
     };
     req.open('GET', APIURL + '/addreq?uid=' + USERID + '&slid=' + slid);
     req.send();

@@ -1,4 +1,6 @@
 NOTES.md
-api/dbconf.py
+dbconf.py
 samplesongs.sql
 __pycache__
+.jshintrc
+.vscode

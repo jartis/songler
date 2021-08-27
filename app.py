@@ -1,25 +1,156 @@
-import flask
-import mysql.connector
 import random
-from flask import request, jsonify
+from flask import Flask, url_for, redirect, request, jsonify, render_template, g, session, flash
+from flask_mysqldb import MySQL
+from flask_bcrypt import Bcrypt
 from dbconf import *
+from flask_oauthlib.client import OAuth
+from twitch import *
 
-app = flask.Flask(
+app = Flask(
     __name__,
     static_url_path='',
-    static_folder='../frontend'
+    static_folder='static'
 )
 
 app.config['DEBUG'] = True
 app.config['SECRET_KEY'] = appsecret
+app.config['MYSQL_HOST'] = dbhost
+app.config['MYSQL_USER'] = dbuser
+app.config['MYSQL_PORT'] = dbport
+app.config['MYSQL_PASSWORD'] = dbpass
+app.config['MYSQL_DB'] = dbname
+app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
-songlerdb = mysql.connector.connect(
-    host=dbhost,
-    user=dbuser,
-    password=dbpass,
-    port=dbport,
-    database=dbname
-)
+db = MySQL(app)
+bcrypt = Bcrypt(app)
+
+oauth = OAuth()
+
+twitchoauth = oauth.remote_app('twitch',
+                          base_url='https://api.twitch.tv/kraken/',
+                          request_token_url=None,
+                          access_token_method='POST',
+                          access_token_url='https://api.twitch.tv/kraken/oauth2/token',
+                          authorize_url='https://api.twitch.tv/kraken/oauth2/authorize',
+                          consumer_key=twitchClientId, # get at: https://www.twitch.tv/kraken/oauth2/clients/new
+                          consumer_secret=twitchSecret,
+                          request_token_params={'scope': ["user_read"]}
+                          )
+
+twitchclient = TwitchClient(client_id=twitchClientId)
+
+#############
+# SeCuRiTy! #
+#############
+
+@app.before_request
+def before_request():
+    g.username = None
+    g.uid = None
+    g.loggedin = False
+    if 'username' in session:
+        g.username = session['username']
+        g.loggedin = True
+        g.uid = session['uid']
+
+@twitchoauth.tokengetter
+def get_twitch_token(token=None):
+    return session.get('twitch_token')
+
+######################
+# Template Rendering #
+######################
+
+# Login page
+@app.route('/login')
+def renderLogin():
+    return render_template('login.jinja')
+# Main user page
+@app.route('/')
+@app.route('/home')
+def renderHome():
+    return render_template('home.jinja',username=g.username,loggedIn=g.loggedin)
+
+@app.route('/songlist/<user>', methods=['GET',])
+def showSongList(user):
+    user = str(user)
+    cursor = db.connection.cursor()
+    query = 'SELECT uid FROM users WHERE username = %s'
+    cursor.execute(query,[user,])
+    row = cursor.fetchone()
+    if row is not None:
+        uid = int(row['uid'])
+        return render_template('requestlist.jinja', uid=uid, user=user)
+    else:
+        return render_template('error.jinja', error=("No user found with the name " + user))
+
+#########################
+# Authentication / User #
+#########################
+
+@app.route('/api/authenticate', methods=['POST',])
+def authenticate():
+    username = request.form['username']
+    password = request.form['password']   
+
+    cursor = db.connection.cursor()
+    query = 'SELECT username, password, uid FROM users WHERE username = %s'
+    cursor.execute(query,[username,])
+    user = cursor.fetchone()
+    temp = user['password']
+
+    if len(user) > 0:
+        session.pop('username',None)
+        if (bcrypt.check_password_hash(temp,password)) == True:  
+            session['username'] = request.form['username']
+            session['loggedIn'] = True
+            session['uid'] = user['uid']
+            return redirect(url_for('renderHome'))
+        else:
+            flash('Invalid Username or Password !!')
+            return render_template('login.jinja')
+
+@app.route('/tlogin')
+def login():
+    return twitchoauth.authorize(callback=url_for('authorized', _external=True))
+
+@app.route('/tlogin/authorized')
+def authorized():
+    resp = twitchoauth.authorized_response()
+    if resp is None:
+        return 'Access denied: reason=%s error=%s' % (
+            request.args['error'],
+            request.args['error_description']
+        )
+    #session['twitch_token'] = (resp['access_token'], '')
+    twitchclient = TwitchHelix(client_id=twitchClientId, oauth_token=resp['access_token'])
+    twitchuser = twitchclient.get_users()
+    username = twitchuser[0]['display_name']
+    uid = twitchuser[0]['id']
+    email = twitchuser[0]['email']
+    # Okay, if this user doesn't exist in our database yet, let's add them!
+    cursor = db.connection.cursor()
+    query = 'SELECT uid FROM users WHERE uid = %s'
+    cursor.execute(query,[uid,])
+    row = cursor.fetchone()
+    if row is None:
+        addUser(username, 'twitch', email, uid)
+
+    # Set the session whatsits and let's rock!
+    session['uid'] = uid
+    session['loggedIn'] = True
+    session['username'] = username
+    return redirect(url_for('renderHome'))
+
+@app.route('/logout')
+def logout():
+    session.pop('twitch_token', None)
+    session.clear()
+    return render_template('home.jinja')
+
+####################
+# Actual API calls #
+####################
 
 # 'uid' is the user to get the song(list) for
 # Sorts on plays/lastplayed by default
@@ -29,7 +160,7 @@ songlerdb = mysql.connector.connect(
 def getAllUserSongs():
     if 'uid' not in request.args:
         return "Error: No User Specified"
-    cursor = songlerdb.cursor(dictionary=True)
+    cursor = db.connection.cursor()
     query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.public, songlists.plays, '
     query += 'songlists.userid, songlists.lastplayed FROM songlists '
     query += 'INNER JOIN songs ON songs.sid = songlists.sid '
@@ -57,7 +188,7 @@ def refillUserSongs():
     uid = request.args['uid']
     nolist = request.args['list']
     count = int(request.args['count'])
-    cursor = songlerdb.cursor(dictionary=True)
+    cursor = db.connection.cursor()
     # NOTE: Get a whole wheel's worth just in case, but only return the top $count
     query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.plays, songlists.userid '
     query += 'FROM songlists INNER JOIN songs ON songs.sid = songlists.sid '
@@ -78,7 +209,7 @@ def playSong():
     if 'sid' not in request.args:
         return "Error: No Song Specified"
     songid = request.args['sid']
-    cursor = songlerdb.cursor(dictionary=True)
+    cursor = db.connection.cursor()
     query = 'UPDATE songlists SET plays = plays + 1, lastplayed = current_date() WHERE slid = %s'
     cursor.execute(query, (songid,))
     result = cursor.fetchall()
@@ -95,7 +226,7 @@ def getPublicList():
         return "Error: No user specified"
     # TODO: Add pagination?
     uid = request.args['uid']
-    cursor = songlerdb.cursor(dictionary=True)
+    cursor = db.connection.cursor()
     query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.plays, songlists.lastplayed '
     query += 'FROM songlists INNER JOIN songs ON songs.sid = songlists.sid '
     query += 'INNER JOIN artists ON songs.artist = artists.aid '
@@ -119,11 +250,11 @@ def getRequests():
     limit = 0
     if 'limit' in request.args:
         limit = int(request.args['limit'])
-    cursor = songlerdb.cursor(dictionary=True)
+    cursor = db.connection.cursor()
     query = 'SELECT requests.rid, requests.slid, artists.artist, titles.title, requests.prio '
     query += 'FROM requests INNER JOIN songlists ON requests.uid = songlists.userid '
-    query += 'AND requests.slid = songlists.slid INNER JOIN songs on songs.sid = songlists.sid '
-    query += 'INNER JOIN titles on songs.title = titles.tid INNER JOIN artists on artists.aid = songs.artist '
+    query += 'AND requests.slid = songlists.slid INNER JOIN songs ON songs.sid = songlists.sid '
+    query += 'INNER JOIN titles ON songs.title = titles.tid INNER JOIN artists ON artists.aid = songs.artist '
     query += 'WHERE requests.uid = %s ORDER BY requests.timestamp ASC'
     cursor.execute(query, (uid,))
     result = cursor.fetchall()
@@ -142,9 +273,10 @@ def addRequest():
     if 'slid' not in request.args:
         return "Error: No Song Specified"
     slid = int(request.args['slid'])
-    cursor = songlerdb.cursor(dictionary=True)
+    cursor = db.connection.cursor()
     query = 'INSERT INTO requests (uid, slid, timestamp) VALUES (%s, %s, NOW())'
     cursor.execute(query, (uid, slid,))
+    db.connection.commit()
     result = cursor.fetchall()
     return jsonify(result)
 
@@ -154,9 +286,10 @@ def removeRequest():
     if 'rid' not in request.args:
         return "No dice"
     rid = int(request.args['rid'])
-    cursor = songlerdb.cursor(dictionary=True)
+    cursor = db.connection.cursor()
     query = 'DELETE FROM requests WHERE rid = %s'
     cursor.execute(query, (rid,))
+    db.connection.commit()
     result = cursor.fetchall()
     return jsonify(result)
 
@@ -168,17 +301,33 @@ def addSong():
     public = int(request.json['pub'])
     uid = int(request.json['uid'])
     sid = findOrAddSong(songartist, songtitle)
-    cursor = songlerdb.cursor(dictionary=True)
+    cursor = db.connection.cursor()
     query = 'INSERT INTO songlists (userid, sid, public) VALUES (%s, %s, %s)'
+    db.connection.commit()
     cursor.execute(query, (uid, sid, public,))
     result = cursor.fetchall()
     return jsonify(result)
 
+####################
+# Helper functions #
+####################
+
+def addUser(username, password, email, uid = -1):
+    cursor = db.connection.cursor()
+    if uid == -1:
+        query = 'INSERT INTO users (username, password, email) VALUES (%s, %s, %s)'
+        cursor.execute(query, (username, password, email,))
+        result = cursor.fetchall()
+    else:
+        query = 'INSERT INTO users (uid, username, password, email) VALUES (%s, %s, %s, %s)'
+        cursor.execute(query, (uid, username, password, email,))
+        result = cursor.fetchall()
+    return True
 
 def findOrAddSong(artist, title):
     aid = -1
     tid = -1
-    cursor = songlerdb.cursor()
+    cursor = db.connection.cursor()
     # Artist ID
     query = 'SELECT aid FROM artists WHERE artist = %s'
     cursor.execute(query, (artist,))
@@ -186,17 +335,23 @@ def findOrAddSong(artist, title):
     if (len(result) == 0):  # Artist Doesn't exist
         query = 'INSERT INTO artists (artist) VALUES (%s)'
         cursor.execute(query, (artist,))
+        db.connection.commit()
+        query = 'SELECT aid FROM artists WHERE artist = %s'
+        cursor.execute(query, (artist,))
         result = cursor.fetchall()
-    aid = result[0]
+    aid = int(result[0]['aid'])
     # Title ID
     query = 'SELECT tid FROM titles WHERE title = %s'
     cursor.execute(query, (title,))
     result = cursor.fetchall()
     if (len(result) == 0):  # Title Doesn't exist
         query = 'INSERT INTO titles (title) VALUES (%s)'
+        db.connection.commit()
         cursor.execute(query, (title,))
+        query = 'SELECT tid FROM titles WHERE title = %s'
+        cursor.execute(query, (title,))        
         result = cursor.fetchall()
-    tid = result[0]
+    tid = int(result[0]['tid'])
     # Actual Song ID
     query = 'SELECT sid FROM songs WHERE artist = %s AND title = %s'
     cursor.execute(query, (aid, tid,))
@@ -204,8 +359,11 @@ def findOrAddSong(artist, title):
     if (len(result) == 0):  # SONG doesn't exist
         query = 'INSERT INTO songs (artist, title) VALUES (%s, %s)'
         cursor.execute(query, (aid, tid,))
+        db.connection.commit()
+        query = 'SELECT sid FROM songs WHERE artist = %s AND title = %s'
+        cursor.execute(query, (aid, tid,))        
         result = cursor.fetchall()
-    return result[0]
+    return result[0]['sid']
 
-
-app.run()
+if __name__ == '__main__':
+    app.run()

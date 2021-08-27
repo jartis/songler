@@ -1,7 +1,7 @@
 # Songler
 Song picker / request tracker / etc for Twitch
 
-## Keyboard shortcuts
+## Keyboard shortcuts (Wheel)
 
 `W` - Show/hide the song wheel
 `R` - Show/hide the request queue
@@ -18,7 +18,6 @@ Song picker / request tracker / etc for Twitch
 * Configuration for wheel palettes / random wheel colors
 * No adjacent wheel slots with matching colors
 * Show selected title on hover (Different from spinner title)
-* Some kind of user/auth system
 * Request security and whatnot
 * "Last Ignored"? Recently ignored songs should creep up less frequently?
 * Show requester names in song list? (Checkable option?)
@@ -34,9 +33,24 @@ Song picker / request tracker / etc for Twitch
 * Error handling for adding song if the server catches fire
 * Serve this shiz up someplace public!
 * LocalStorage / DB Storage of display prefs
+* Limits on requests for non logged in users
+* Limits on requests for logged in users
+* Toggle "Allow anonymous requests"
+* Navbar entry for songlist editing
+* Search options for finding a user's songlist
+* Search options for finding an artist or a song
+* Center search box in navbar somehow? (It moves based on username length)
+* Personal profile
+* Link Twitch account
+* Link streamlabs account?
+* Sort songlist displays by column headers
+* User Registration
+* Password strength on user registration page
+* Public profile pages? (Or links to pages in search)
 
 ## Done
 
+* ~~Some kind of user/auth system~~
 * ~~Keyboard shortcuts?~~
 * ~~Don't refill wheel with played or ignored songs from this session~~
 * ~~Toggleable queue visibility~~

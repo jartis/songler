@@ -1,0 +1,10 @@
+{% extends 'basepage.jinja' %}
+{% block content %}
+<div class="bg-light p-5 rounded">
+  <h1>Songlist for {{user}}</h1>
+<div id='songlist'>
+</div>
+</div>
+<script>var uid = {{ uid }};</script>
+<script src='/requestlist.js'></script>
+{% endblock %}

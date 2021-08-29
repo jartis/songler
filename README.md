@@ -20,15 +20,12 @@ Song picker / request tracker / etc for Twitch
 * Show selected title on hover (Different from spinner title)
 * Request security and whatnot
 * "Last Ignored"? Recently ignored songs should creep up less frequently?
-* Show requester names in song list? (Checkable option?)
+* Toggle resquester name display
 * Save display configuration
 * Lock in "config mode" to ignore canvas clicks?
 * End-of-session reports (for import to practice trackers?)
 * Based on normalization, "fun reports" like most played artists?
-* Add requester info to requests from public page
-* Lock header rows when scrolling songlist
 * Edit songs from list
-* Paginate song dashboard / public lists?
 * Error handling for adding song that is already on user's songlist
 * Error handling for adding song if the server catches fire
 * Serve this shiz up someplace public!
@@ -36,13 +33,12 @@ Song picker / request tracker / etc for Twitch
 * Limits on requests for non logged in users
 * Limits on requests for logged in users
 * Toggle "Allow anonymous requests"
-* Navbar entry for songlist editing
 * Search options for finding a user's songlist
 * Search options for finding an artist or a song
 * Center search box in navbar somehow? (It moves based on username length)
 * Personal profile
 * Link Twitch account to existing account
-* Link streamlabs account?
+* Link streamlabs account? Other accounts?
 * Sort songlist displays by column headers
 * Password strength on user registration page
 * Public profile pages? (Or links to pages in search)
@@ -51,6 +47,11 @@ Song picker / request tracker / etc for Twitch
 
 ## Done
 
+* ~~Add requester info to requests from public page~~
+* ~~Lock header rows when scrolling songlist~~ Not necessary with pagination
+* ~~Paginate song dashboard / public lists?~~
+* ~~Show requester names in song list?~~
+* ~~Navbar entry for songlist editing~~
 * ~~New User Registration~~
 * ~~Some kind of user/auth system~~
 * ~~Keyboard shortcuts?~~

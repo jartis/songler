@@ -2,9 +2,16 @@ import random
 from flask import Flask, url_for, redirect, request, jsonify, render_template, g, session, flash
 from flask_mysqldb import MySQL
 from flask_bcrypt import Bcrypt
-from dbconf import *
 from flask_oauthlib.client import OAuth
 from twitch import *
+from enum import IntEnum
+
+from dbconf import *
+
+
+class authProvider(IntEnum):
+    TWITCH = 1
+
 
 app = Flask(
     __name__,
@@ -23,7 +30,6 @@ app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 db = MySQL(app)
 bcrypt = Bcrypt(app)
-
 oauth = OAuth()
 
 twitchoauth = oauth.remote_app('twitch',
@@ -64,32 +70,29 @@ def get_twitch_token(token=None):
 ######################
 
 # Login page
-
-
 @app.route('/login')
 def renderLogin():
     return render_template('login.jinja')
-# Main user page
 
-
+# Create user page
 @app.route('/newuser')
 def newuser():
     return render_template('newuser.jinja')
 
-
+# User's overlay
 @app.route('/wheel')
 def renderWheel():
     if g.uid is None:
         return render_template('error.jinja', error=("You must be logged in to view your overlay"))
-    return render_template('wheel.jinja', userid=g.uid, username=g.username, loggedIn=g.loggedin)
+    return render_template('wheel.jinja', uid=g.uid, username=g.username, loggedIn=g.loggedin)
 
-
+# Main page
 @app.route('/')
 @app.route('/home')
 def renderHome():
     return render_template('home.jinja', username=g.username, loggedIn=g.loggedin)
 
-
+# Public songlist for user
 @app.route('/songlist/<user>', methods=['GET', ])
 def showSongList(user):
     user = str(user)
@@ -103,6 +106,7 @@ def showSongList(user):
     else:
         return render_template('error.jinja', error=("No user found with the name " + user), username=g.username, loggedIn=g.loggedin)
 
+# Manage current user's songlist
 @app.route('/managelist', methods=['GET', ])
 def manageSongList():
     if int(g.uid) > 0:
@@ -115,7 +119,7 @@ def manageSongList():
 # Authentication / User #
 #########################
 
-
+# API endpoint for adding a user
 @app.route('/adduser', methods=['POST', ])
 def addUser():
     username = request.form['username']
@@ -164,24 +168,20 @@ def login():
 def authorized():
     resp = twitchoauth.authorized_response()
     if resp is None:
-        return 'Access denied: reason=%s error=%s' % (
-            request.args['error'],
-            request.args['error_description']
-        )
-    #session['twitch_token'] = (resp['access_token'], '')
+        return render_template('error.jinja', error=('Error logging in: ' + request.args['error'] + ' - ' + request.args['error_description']))
     twitchclient = TwitchHelix(
         client_id=twitchClientId, oauth_token=resp['access_token'])
     twitchuser = twitchclient.get_users()
     username = twitchuser[0]['display_name']
-    uid = twitchuser[0]['id']
+    twitchuid = twitchuser[0]['id']
     email = twitchuser[0]['email']
     # Okay, if this user doesn't exist in our database yet, let's add them!
     cursor = db.connection.cursor()
-    query = 'SELECT uid FROM users WHERE uid = %s'
-    cursor.execute(query, [uid, ])
+    query = 'SELECT uid FROM users WHERE twitch = %s'
+    cursor.execute(query, [twitchuid, ])
     row = cursor.fetchone()
     if row is None:
-        addNewUser(username, '', email, uid)
+        uid = addNewUser(username, '', email, twitchuid, twitch)
 
     # Set the session whatsits and let's rock!
     session['uid'] = uid
@@ -236,11 +236,11 @@ def getAllUserSongs(uid):
     uid = int(uid)
     cursor = db.connection.cursor()
     query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.public, songlists.plays, '
-    query += 'songlists.userid, songlists.lastplayed FROM songlists '
+    query += 'songlists.uid, songlists.lastplayed FROM songlists '
     query += 'INNER JOIN songs ON songs.sid = songlists.sid '
-    query += 'INNER JOIN artists ON artists.aid = songs.artist '
-    query += 'INNER JOIN titles ON titles.tid = songs.title '
-    query += 'WHERE userid = %s ORDER BY plays ASC, lastplayed ASC'
+    query += 'INNER JOIN artists ON artists.aid = songs.aid '
+    query += 'INNER JOIN titles ON titles.tid = songs.tid '
+    query += 'WHERE uid = %s ORDER BY plays ASC, lastplayed ASC'
     cursor.execute(query, (uid,))
     result = cursor.fetchall()
     return jsonify(result)
@@ -264,11 +264,11 @@ def refillUserSongs():
     count = int(request.args['count'])
     cursor = db.connection.cursor()
     # NOTE: Get a whole wheel's worth just in case, but only return the top $count
-    query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.plays, songlists.userid '
+    query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.plays, songlists.uid '
     query += 'FROM songlists INNER JOIN songs ON songs.sid = songlists.sid '
-    query += 'INNER JOIN artists ON artists.aid = songs.artist '
-    query += 'INNER JOIN titles ON titles.tid = songs.title '
-    query += 'WHERE userid = %s AND slid NOT IN (%s) ORDER BY plays ASC, lastplayed ASC LIMIT 50'
+    query += 'INNER JOIN artists ON artists.aid = songs.aid '
+    query += 'INNER JOIN titles ON titles.tid = songs.aid '
+    query += 'WHERE uid = %s AND slid NOT IN (%s) ORDER BY plays ASC, lastplayed ASC LIMIT 50'
     cursor.execute(query, (uid, nolist))
     result = cursor.fetchall()
     random.shuffle(result)
@@ -303,9 +303,9 @@ def getPublicList():
     cursor = db.connection.cursor()
     query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.plays, songlists.lastplayed '
     query += 'FROM songlists INNER JOIN songs ON songs.sid = songlists.sid '
-    query += 'INNER JOIN artists ON songs.artist = artists.aid '
-    query += 'INNER JOIN titles ON songs.title = titles.tid '
-    query += 'WHERE userid = %s AND public = 1'
+    query += 'INNER JOIN artists ON songs.aid = artists.aid '
+    query += 'INNER JOIN titles ON songs.tid = titles.tid '
+    query += 'WHERE uid = %s AND public = 1'
     cursor.execute(query, (uid,))
     result = cursor.fetchall()
     return jsonify(result)
@@ -326,10 +326,10 @@ def getRequests():
         limit = int(request.args['limit'])
     cursor = db.connection.cursor()
     query = 'SELECT requests.rid, requests.slid, users.username, artists.artist, titles.title, requests.prio '
-    query += 'FROM requests INNER JOIN songlists ON requests.uid = songlists.userid '
+    query += 'FROM requests INNER JOIN songlists ON requests.uid = songlists.uid '
     query += 'AND requests.slid = songlists.slid INNER JOIN songs ON songs.sid = songlists.sid '
-    query += 'INNER JOIN titles ON songs.title = titles.tid '
-    query += 'INNER JOIN artists ON artists.aid = songs.artist '
+    query += 'INNER JOIN titles ON titles.tid = songs.tid '
+    query += 'INNER JOIN artists ON artists.aid = songs.tid '
     query += 'LEFT JOIN users ON requests.ruid = users.uid '
     query += 'WHERE requests.uid = %s ORDER BY requests.timestamp ASC'
     cursor.execute(query, (uid,))
@@ -351,13 +351,16 @@ def addRequest():
     slid = int(request.args['slid'])
     cursor = db.connection.cursor()
     query = 'INSERT INTO requests (uid, ruid, slid, timestamp) '
-    query += 'SELECT userid, %s, slid, NOW() FROM songlists '
+    query += 'SELECT uid, %s, slid, NOW() FROM songlists '
     query += 'WHERE slid = %s'
 
     cursor.execute(query, (ruid, slid,))
     db.connection.commit()
     result = cursor.fetchall()
     return jsonify(result)
+
+# removereq - Removes a request from the overall request message queue
+# rid - the key for the request to knock out of the message queue
 
 
 @app.route('/api/v1/removereq', methods=['GET'])
@@ -381,7 +384,7 @@ def addSong():
     uid = int(request.json['uid'])
     sid = findOrAddSong(songartist, songtitle)
     cursor = db.connection.cursor()
-    query = 'INSERT INTO songlists (userid, sid, public) VALUES (%s, %s, %s)'
+    query = 'INSERT INTO songlists (uid, sid, public) VALUES (%s, %s, %s)'
     db.connection.commit()
     cursor.execute(query, (uid, sid, public,))
     result = cursor.fetchall()
@@ -392,7 +395,7 @@ def addSong():
 ####################
 
 
-def addNewUser(username, password, email, uid=-1):
+def addNewUser(username, password, email, uid=-1, tuid=''):
     cursor = db.connection.cursor()
     if uid == -1:
         # Create a Username/Password user
@@ -401,8 +404,8 @@ def addNewUser(username, password, email, uid=-1):
         result = cursor.fetchall()
     else:
         # Create a Twitch-based user
-        query = 'INSERT INTO users (uid, username, password, email, twitch) VALUES (%s, %s, %s, %s, 1)'
-        cursor.execute(query, (uid, username, password, email,))
+        query = 'INSERT INTO users (uid, username, password, email, twitch) VALUES (%s, %s, %s, %s, %s)'
+        cursor.execute(query, (uid, username, password, email, tuid,))
         result = cursor.fetchall()
     query = 'SELECT uid FROM users WHERE username LIKE %s'
     cursor.execute(query, (username,))

@@ -87,6 +87,7 @@ function saveSong(e) {
     let newSong = {
         title: $('#addsongtitle').val(),
         artist: $('#addsongartist').val(),
+        link: $('#addsonglink').val(),
         pub: published ? 1 : 0,
         uid: uid,
     };
@@ -100,7 +101,8 @@ function saveSong(e) {
         complete: function (msg) {
             if (msg.status == 200) {
                 $('#addSongModal').modal('hide');
-                alert('Song saved successfully!');
+                makeToast('Success', 'Your song has been added successfully!');
+                writeSongList();
             } else {
                 // OH CRAP EVERYTHING IS ON FIRE
             }

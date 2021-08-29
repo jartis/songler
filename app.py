@@ -5,6 +5,7 @@ from flask_bcrypt import Bcrypt
 from flask_oauthlib.client import OAuth
 from twitch import *
 from enum import IntEnum
+import urlparse
 
 from dbconf import *
 
@@ -70,16 +71,22 @@ def get_twitch_token(token=None):
 ######################
 
 # Login page
+
+
 @app.route('/login')
 def renderLogin():
     return render_template('login.jinja')
 
 # Create user page
+
+
 @app.route('/newuser')
 def newuser():
     return render_template('newuser.jinja')
 
 # User's overlay
+
+
 @app.route('/wheel')
 def renderWheel():
     if g.uid is None:
@@ -87,12 +94,16 @@ def renderWheel():
     return render_template('wheel.jinja', uid=g.uid, username=g.username, loggedIn=g.loggedin)
 
 # Main page
+
+
 @app.route('/')
 @app.route('/home')
 def renderHome():
     return render_template('home.jinja', username=g.username, loggedIn=g.loggedin)
 
 # Public songlist for user
+
+
 @app.route('/songlist/<user>', methods=['GET', ])
 def showSongList(user):
     user = str(user)
@@ -107,6 +118,8 @@ def showSongList(user):
         return render_template('error.jinja', error=("No user found with the name " + user), username=g.username, loggedIn=g.loggedin)
 
 # Manage current user's songlist
+
+
 @app.route('/managelist', methods=['GET', ])
 def manageSongList():
     if int(g.uid) > 0:
@@ -382,7 +395,8 @@ def addSong():
     songartist = request.json['artist']
     public = int(request.json['pub'])
     uid = int(request.json['uid'])
-    sid = findOrAddSong(songartist, songtitle)
+    link = request.json['link']
+    sid = findOrAddSong(songartist, songtitle, link)
     cursor = db.connection.cursor()
     query = 'INSERT INTO songlists (uid, sid, public) VALUES (%s, %s, %s)'
     db.connection.commit()
@@ -413,7 +427,22 @@ def addNewUser(username, password, email, uid=-1, tuid=''):
     return int(row['uid'])
 
 
-def findOrAddSong(artist, title):
+def getVideoId(link):
+    query = urlparse.urlparse(link)
+    if query.hostname == 'youtu.be':
+        return query.path[1:]
+    if query.hostname in ('www.youtube.com', 'youtube.com'):
+        if query.path == '/watch':
+            p = urlparse.parse_qs(query.query)
+            return p['v'][0]
+        if query.path[:7] == '/embed/':
+            return query.path.split('/')[2]
+        if query.path[:3] == '/v/':
+            return query.path.split('/')[2]
+    return ''
+
+
+def findOrAddSong(artist, title, link):
     aid = -1
     tid = -1
     cursor = db.connection.cursor()
@@ -446,8 +475,9 @@ def findOrAddSong(artist, title):
     cursor.execute(query, (aid, tid,))
     result = cursor.fetchall()
     if (len(result) == 0):  # SONG doesn't exist
-        query = 'INSERT INTO songs (artist, title) VALUES (%s, %s)'
-        cursor.execute(query, (aid, tid,))
+        ytid = getVideoId(link)
+        query = 'INSERT INTO songs (artist, title, ytid) VALUES (%s, %s, %s)'
+        cursor.execute(query, (aid, tid, ytid))
         db.connection.commit()
         query = 'SELECT sid FROM songs WHERE artist = %s AND title = %s'
         cursor.execute(query, (aid, tid,))

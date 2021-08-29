@@ -44,6 +44,10 @@ Song picker / request tracker / etc for Twitch
 * Public profile pages? (Or links to pages in search)
 * Toggle in userinfo (?) to only show wheel option if you, y'know, have a wheel / songlist
 * Add toggle for "wheel-able" songs, separate from public
+* Request queue page that is NOT the wheel overlay (with the youtube link, etc)
+* Search and update fields when adding songs (pull ytid with artist/title)
+* Maybe document the db structure in a good formal way?
+* "Object" out the, y'know, objects in the python backend
 
 ## Done
 
@@ -93,6 +97,7 @@ Song picker / request tracker / etc for Twitch
 2. What do we do to build the initial wheel? How parameterizable should that be? Is the wheel completely optional for the complete overlay? (ie., use the queue(s) without a wheel)
   * I think making the wheel visibility toggle-able is a good call, so you can have the queue without the wheel, or turn it on-and-off on the fly. Queue visibility is kind of necessary, though, IMHO. Keyboard shortcuts for enable/disable wheel?
 3. What's the structure for authorization and the assorted streamer/viewer pages? What auth mechanism do I want to use?
+4. Does ytid belong on a SONG level, or a SONGLIST entry level? 
 
 ## Notes
 

@@ -1,5 +1,11 @@
 var songlist = []; // Holder for everything we get back
 var listOffset = 0;
+var sort = 0;
+
+const ARTIST = 1;
+const TITLE = 2;
+const PLAYS = 3;
+const LAST = 4;
 
 window.onload = function () {
     const req = new XMLHttpRequest();
@@ -17,13 +23,65 @@ window.onload = function () {
     req.send();
 };
 
+function dosort(e) {
+    let sorttype = e.getAttribute('data-field');
+    switch (sorttype) {
+        case 'artist':
+            if (sort == ARTIST) {
+                sort = -ARTIST;
+                songlist.sort((b, a) => (a.artist.localeCompare(b.artist)));
+            } else {
+                sort = ARTIST;
+                songlist.sort((a, b) => (a.artist.localeCompare(b.artist)));
+            }
+            break;
+        case 'title':
+            if (sort == TITLE) {
+                sort = -TITLE;
+                songlist.sort((b, a) => (a.title.localeCompare(b.title)));
+            } else {
+                sort = TITLE;
+                songlist.sort((a, b) => (a.title.localeCompare(b.title)));
+            }
+            break;
+        case 'plays':
+            if (sort == PLAYS) {
+                sort = -PLAYS;
+                songlist.sort((b, a) => (a.plays < b.plays ? 1 : -1));
+            } else {
+                sort = PLAYS;
+                songlist.sort((a, b) => (a.plays < b.plays ? 1 : -1));
+            }
+            break;
+        case 'last':
+            if (sort == LAST) {
+                sort = -LAST;
+                songlist.sort((b, a) => (b.lastplayed < a.lastplayed ? 1 : -1));
+            } else {
+                sort = LAST;
+                songlist.sort((b, a) => (a.lastplayed < b.lastplayed ? 1 : -1));
+            }
+            break;
+    }
+    writeSongList();
+
+}
+
 function writeSongList() {
     let tblHtml = '<table class="table table-secondary table-striped"><thead><tr>';
-    tblHtml += '<th style="width: 20%">Artist</th>';
-    tblHtml += '<th style="width: 20%">Title</th>';
-    tblHtml += '<th style="width: 20%">Play Count</th>';
-    tblHtml += '<th style="width: 20%">Last Played</th>';
-    tblHtml += '<th style="width: 20%"></th>';
+    tblHtml += '<th style="width: 20%" data-field="artist" onclick="dosort(this)">Artist';
+    if (sort == -1) { tblHtml += ' ▼'; } 
+    if (sort == 1) { tblHtml += ' ▲'; }
+    tblHtml += '</th><th style="width: 20%" data-field="title" onclick="dosort(this)">Title';
+    if (sort == -2) { tblHtml += ' ▼'; } 
+    if (sort == 2) { tblHtml += ' ▲'; }
+    tblHtml += '</th><th style="width: 20%" data-field="plays" onclick="dosort(this)">Play Count';
+    if (sort == -3) { tblHtml += ' ▼'; } 
+    if (sort == 3) { tblHtml += ' ▲'; }
+    tblHtml += '</th><th style="width: 20%" data-field="last" onclick="dosort(this)">Last Played';
+    if (sort == -4) { tblHtml += ' ▼'; } 
+    if (sort == 4) { tblHtml += ' ▲'; }
+    tblHtml += '</th><th style="width: 20%"></th>';
     tblHtml += '</tr></thead><tbody>';
     let maxLength = Math.min(songlist.length, listOffset + 10);
     let curPage = Math.ceil(listOffset / 10) + 1;
@@ -35,7 +93,7 @@ function writeSongList() {
         tblHtml += '<td>' + song.title.toString() + '</td>';
         tblHtml += '<td class="text-center">' + song.plays.toString() + '</td>';
         tblHtml += '<td>' + (song.lastplayed == null ? 'Never' : song.lastplayed.toString()) + '</td>';
-        tblHtml += '<td><button data-artist="' + song.artist.toString() + '" data-title="' + song.title.toString() + '" data-id="' + song.slid + '" onclick="reqSong(this)">Request This Song</button></td>';
+        tblHtml += '<td><button class="btn btn-secondary" data-artist="' + song.artist.toString() + '" data-title="' + song.title.toString() + '" data-id="' + song.slid + '" onclick="reqSong(this)">Request This Song</button></td>';
         tblHtml += '</tr>';
     }
     tblHtml += '<td colspan=5>';
@@ -70,7 +128,7 @@ function reqSong(e) {
     req.send();
 }
 
-function firstPage(){
+function firstPage() {
     listOffset = 0;
     writeSongList();
 }

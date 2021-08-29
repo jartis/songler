@@ -5,7 +5,7 @@ from flask_bcrypt import Bcrypt
 from flask_oauthlib.client import OAuth
 from twitch import *
 from enum import IntEnum
-import urlparse
+from urllib.parse import urlparse
 
 from dbconf import *
 
@@ -194,7 +194,9 @@ def authorized():
     cursor.execute(query, [twitchuid, ])
     row = cursor.fetchone()
     if row is None:
-        uid = addNewUser(username, '', email, twitchuid, twitch)
+        uid = addNewUser(username, '', email, -1, twitchuid)
+    else:
+        uid = row['uid']
 
     # Set the session whatsits and let's rock!
     session['uid'] = uid
@@ -399,10 +401,26 @@ def addSong():
     sid = findOrAddSong(songartist, songtitle, link)
     cursor = db.connection.cursor()
     query = 'INSERT INTO songlists (uid, sid, public) VALUES (%s, %s, %s)'
-    db.connection.commit()
     cursor.execute(query, (uid, sid, public,))
+    db.connection.commit()
     result = cursor.fetchall()
     return jsonify(result)
+
+
+@app.route('/api/v1/delsong', methods=['POST'])
+def removeSongFromList():
+    slid = int(request.json['slid'])
+    cursor = db.connection.cursor()
+    query = 'SELECT uid FROM songlists WHERE slid = %s'
+    cursor.execute(query, (slid,))
+    result = cursor.fetchone()
+    # You can only edit your own songlist
+    if (result['uid'] != session['uid']):
+        return 'Invalid User', 401
+    query = 'DELETE FROM songlists WHERE slid = %s'
+    cursor.execute(query, (slid,))
+    result = cursor.fetchone()
+    return 'OK'
 
 ####################
 # Helper functions #

@@ -39,7 +39,6 @@ Song picker / request tracker / etc for Twitch
 * Personal profile
 * Link Twitch account to existing account
 * Link streamlabs account? Other accounts?
-* Sort songlist displays by column headers
 * Password strength on user registration page
 * Public profile pages? (Or links to pages in search)
 * Toggle in userinfo (?) to only show wheel option if you, y'know, have a wheel / songlist
@@ -51,6 +50,8 @@ Song picker / request tracker / etc for Twitch
 
 ## Done
 
+* ~~Remove (delete) songs from songlist~~
+* ~~Sort songlist displays by column headers~~
 * ~~Add requester info to requests from public page~~
 * ~~Lock header rows when scrolling songlist~~ Not necessary with pagination
 * ~~Paginate song dashboard / public lists?~~

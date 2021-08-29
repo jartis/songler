@@ -1,5 +1,12 @@
 var songlist = []; // Holder for everything we get back
 var listOffset = 0;
+var sort = 0;
+
+const ARTIST = 1;
+const TITLE = 2;
+const PLAYS = 3;
+const LAST = 4;
+const PUB = 5;
 
 window.onload = function () {
     $('#addSongModal').modal();
@@ -16,14 +23,76 @@ function loadList() {
     req.send();
 }
 
+function dosort(e) {
+    let sorttype = e.getAttribute('data-field');
+    switch (sorttype) {
+        case 'artist':
+            if (sort == ARTIST) {
+                sort = -ARTIST;
+                songlist.sort((b, a) => (a.artist.localeCompare(b.artist)));
+            } else {
+                sort = ARTIST;
+                songlist.sort((a, b) => (a.artist.localeCompare(b.artist)));
+            }
+            break;
+        case 'title':
+            if (sort == TITLE) {
+                sort = -TITLE;
+                songlist.sort((b, a) => (a.title.localeCompare(b.title)));
+            } else {
+                sort = TITLE;
+                songlist.sort((a, b) => (a.title.localeCompare(b.title)));
+            }
+            break;
+        case 'plays':
+            if (sort == PLAYS) {
+                sort = -PLAYS;
+                songlist.sort((b, a) => (a.plays < b.plays ? 1 : -1));
+            } else {
+                sort = PLAYS;
+                songlist.sort((a, b) => (a.plays < b.plays ? 1 : -1));
+            }
+            break;
+        case 'last':
+            if (sort == LAST) {
+                sort = -LAST;
+                songlist.sort((b, a) => (b.lastplayed < a.lastplayed ? 1 : -1));
+            } else {
+                sort = LAST;
+                songlist.sort((b, a) => (a.lastplayed < b.lastplayed ? 1 : -1));
+            }
+            break;
+        case 'pub':
+            if (sort == PUB) {
+                sort = -PUB;
+                songlist.sort((b, a) => ((a.public === b.public) ? 0 : a.public?-1:1));
+            } else {
+                sort = PUB;
+                songlist.sort((a, b) => ((a.public === b.public) ? 0 : a.public?-1:1));
+            }
+            break;
+    }
+    writeSongList();
+}
+
 function writeSongList() {
     let tblHtml = '<table class="table table-secondary table-hover table-striped"><thead><tr>';
-    tblHtml += '<th style="width: 20%">Artist</th>';
-    tblHtml += '<th style="width: 20%">Title</th>';
-    tblHtml += '<th style="width: 10%">Play Count</th>';
-    tblHtml += '<th style="width: 20%">Last Played</th>';
-    tblHtml += '<th style="width: 10%">Published</th>';
-    tblHtml += '<th style="width: 20%"></th>';
+    tblHtml += '<th style="width: 20%" data-field="artist" onclick="dosort(this)">Artist';
+    if (sort == -1) { tblHtml += ' ▼'; } 
+    if (sort == 1) { tblHtml += ' ▲'; }
+    tblHtml += '</th><th style="width: 20%" data-field="title" onclick="dosort(this)">Title';
+    if (sort == -2) { tblHtml += ' ▼'; } 
+    if (sort == 2) { tblHtml += ' ▲'; }
+    tblHtml += '</th><th style="width: 10%" data-field="plays" onclick="dosort(this)">Play Count';
+    if (sort == -3) { tblHtml += ' ▼'; } 
+    if (sort == 3) { tblHtml += ' ▲'; }
+    tblHtml += '</th><th style="width: 20%" data-field="last" onclick="dosort(this)">Last Played';
+    if (sort == -4) { tblHtml += ' ▼'; } 
+    if (sort == 4) { tblHtml += ' ▲'; }
+    tblHtml += '</th><th style="width: 10%" data-field="pub" onclick="dosort(this)">Published';
+    if (sort == -5) { tblHtml += ' ▼'; } 
+    if (sort == 5) { tblHtml += ' ▲'; }
+    tblHtml += '</th><th style="width: 20%"></th>';
     tblHtml += '</tr></thead><tbody>';
     let maxLength = Math.min(songlist.length, listOffset + 10);
     let curPage = Math.ceil(listOffset / 10) + 1;
@@ -37,9 +106,10 @@ function writeSongList() {
         tblHtml += '<td>' + (song.lastplayed || "Never").toString() + '</td>';
         tblHtml += '<td><input type="checkbox" ';
         if (song.public) { tblHtml += 'checked '; }
-        tblHtml += '/></td>';
-        tblHtml += '<td><button data-id="' + song.slid + '" onclick="editSong(this)">Edit Song</button></td>';
-        tblHtml += '</tr>';
+        tblHtml += '/></td><td>';
+        tblHtml += '<button style="margin: 2%;" class="btn btn-secondary" data-id="' + song.slid + '" onclick="editSong(this)">✎ Edit</button>';
+        tblHtml += '<button style="margin: 2%;" class="btn btn-danger" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="deleteSong(this)">✖ Remove</button>';
+        tblHtml += '</td></tr>';
     }
     tblHtml += '<td colspan=5>';
     tblHtml += '<span style="width: 20%; margin: auto; padding:2%;">';
@@ -62,7 +132,7 @@ function writeSongList() {
     document.getElementById('songlist').innerHTML = tblHtml;
 }
 
-function firstPage(){
+function firstPage() {
     listOffset = 0;
     writeSongList();
 }
@@ -79,6 +149,26 @@ function nextPage() {
 function lastPage() {
     listOffset = songlist.length - 10;
     writeSongList();
+}
+
+function deleteSong(e) {
+    let slid = { slid: e.getAttribute('data-id'), };
+    let title = e.getAttribute('data-title');
+    $.ajax({
+        type: 'POST',
+        url: APIURL + '/delsong',
+        data: JSON.stringify(slid),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        complete: function (msg) {
+            if (msg.status == 200) {
+                makeToast('Success', title + ' has been removed from your list.');
+                loadList();
+            } else {
+                makeToast('Error', title + ' could not be removed from your list.');
+            }
+        }
+    });
 }
 
 
@@ -102,7 +192,7 @@ function saveSong(e) {
             if (msg.status == 200) {
                 $('#addSongModal').modal('hide');
                 makeToast('Success', 'Your song has been added successfully!');
-                writeSongList();
+                loadList();
             } else {
                 // OH CRAP EVERYTHING IS ON FIRE
             }

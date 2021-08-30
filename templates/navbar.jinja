@@ -10,17 +10,29 @@
                 <li class="nav-item">
                     <a class="nav-link active" aria-current="page" href="/">Home</a>
                 </li>
+                {% if g.loggedin %}
                 <li class="nav-item">
                     <a class="nav-link" href="/managelist">Manage My Songlist</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/wheel" tabindex="-1">My Stream Overlay</a>
-                </li>
+                {% endif %}
+                {% if g.loggedin %}
+                    {% if g.hasoverlay %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/wheel" tabindex="-1">My Stream Overlay</a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/wheel" tabindex="-1">Create Stream Overlay</a>
+                    </li>
+                    {% endif %}
+                {% endif %}
             </ul>
-                <form class="d-flex">
-                <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+            <form class="d-flex">
+                <input class="form-control me-2" id="srch" name="srch" type="search" placeholder="Search"
+                autocomplete="off" aria-label="Search">
                 <button class="btn btn-outline-success" type="submit">Search</button>
             </form>
             {% include 'auth.jinja' %}
         </div>
 </nav>
+<script src='/navbar.js'></script>

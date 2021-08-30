@@ -21,35 +21,46 @@ Song picker / request tracker / etc for Twitch
 * Request security and whatnot
 * "Last Ignored"? Recently ignored songs should creep up less frequently?
 * Toggle resquester name display
-* Save display configuration
 * Lock in "config mode" to ignore canvas clicks?
 * End-of-session reports (for import to practice trackers?)
 * Based on normalization, "fun reports" like most played artists?
-* Edit songs from list
 * Error handling for adding song that is already on user's songlist
 * Error handling for adding song if the server catches fire
 * Serve this shiz up someplace public!
-* LocalStorage / DB Storage of display prefs
 * Limits on requests for non logged in users
 * Limits on requests for logged in users
 * Toggle "Allow anonymous requests"
-* Search options for finding a user's songlist
-* Search options for finding an artist or a song
+* Search options for finding all songs by an artist
 * Center search box in navbar somehow? (It moves based on username length)
-* Personal profile
+* Add Fields to Personal profile
 * Link Twitch account to existing account
 * Link streamlabs account? Other accounts?
 * Password strength on user registration page
-* Public profile pages? (Or links to pages in search)
-* Toggle in userinfo (?) to only show wheel option if you, y'know, have a wheel / songlist
 * Add toggle for "wheel-able" songs, separate from public
 * Request queue page that is NOT the wheel overlay (with the youtube link, etc)
 * Search and update fields when adding songs (pull ytid with artist/title)
 * Maybe document the db structure in a good formal way?
 * "Object" out the, y'know, objects in the python backend
+* Put a toaster on the wheel page!!!
+* Set control values on config load
+* Interstitial "Initialize" page for making a stream overlay?
+* Fix displayname on songlist page (Use DB Canonicalization)
+* Password changing / recovery
+* Track separate usernames per system? (DisplayName independent?)
+* Toggle for Live Request Polling (15s)
+* Display page for Artists (all songs by, etc)
+* Add most recent 'Last Played' to song info page
 
 ## Done
 
+* ~~Edit songs from list~~ - No editing songs on list. Delete/readd to keep "songs" up to date.
+* ~~Save display configuration~~
+* ~~Public profile pages? (Or links to pages in search)~~
+* ~~Toggle in userinfo (?) to only show wheel option if you, y'know, have a wheel / songlist~~
+* ~~Search options for finding a user's songlist~~
+* ~~Search options for finding a song~~
+* ~~Fix "Rob P - The Pretender" bug in request~~
+* ~~LocalStorage / DB Storage of display prefs~~
 * ~~Remove (delete) songs from songlist~~
 * ~~Sort songlist displays by column headers~~
 * ~~Add requester info to requests from public page~~
@@ -99,6 +110,7 @@ Song picker / request tracker / etc for Twitch
   * I think making the wheel visibility toggle-able is a good call, so you can have the queue without the wheel, or turn it on-and-off on the fly. Queue visibility is kind of necessary, though, IMHO. Keyboard shortcuts for enable/disable wheel?
 3. What's the structure for authorization and the assorted streamer/viewer pages? What auth mechanism do I want to use?
 4. Does ytid belong on a SONG level, or a SONGLIST entry level? 
+   * This is going to live at a SONGLIST level, you may want a different version/link than another user. 
 
 ## Notes
 

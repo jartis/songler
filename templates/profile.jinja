@@ -1,0 +1,9 @@
+{% extends 'basepage.jinja' %}
+{% block content %}
+<div class="bg-light p-5 rounded">
+  <h1 id='profilename'></h1>
+  <div id='userinfo'></div>
+</div>
+<script>var uid = {{ g.uid }}; var listuid = {{ listuid }}; var listuser = '{{ listuser }}'; </script>
+<script src='/profile.js'></script>
+{% endblock %}

@@ -13,13 +13,14 @@ window.onload = function () {
         songlist = JSON.parse(this.responseText);
         writeSongList();
     };
-    if (uid == listuid) {
-        // Get ALL the songs for onesself.
-        // TODO: Mark this somehow
-        req.open('GET', APIURL + '/allsongs/' + uid);
-    } else {
+    // TODO: Move requesting private songs to the manage page, methinks
+    // if (uid == listuid) {
+    //     // Get ALL the songs for onesself.
+    //     // TODO: Mark this somehow
+    //     req.open('GET', APIURL + '/allsongs/' + uid);
+    // } else {
         req.open('GET', APIURL + '/getpubsongs?uid=' + listuid);
-    }
+    // }
     req.send();
 };
 
@@ -68,7 +69,7 @@ function dosort(e) {
 }
 
 function writeSongList() {
-    let tblHtml = '<table class="table table-secondary table-striped"><thead><tr>';
+    let tblHtml = '<table class="table align-middle table-secondary table-striped"><thead><tr>';
     tblHtml += '<th style="width: 20%" data-field="artist" onclick="dosort(this)">Artist';
     if (sort == -1) { tblHtml += ' ▼'; } 
     if (sort == 1) { tblHtml += ' ▲'; }
@@ -92,8 +93,11 @@ function writeSongList() {
         tblHtml += '<td>' + song.artist.toString() + '</td>';
         tblHtml += '<td>' + song.title.toString() + '</td>';
         tblHtml += '<td class="text-center">' + song.plays.toString() + '</td>';
-        tblHtml += '<td>' + (song.lastplayed == null ? 'Never' : song.lastplayed.toString()) + '</td>';
-        tblHtml += '<td><button class="btn btn-secondary" data-artist="' + song.artist.toString() + '" data-title="' + song.title.toString() + '" data-id="' + song.slid + '" onclick="reqSong(this)">Request This Song</button></td>';
+        let lp = 'Never';
+        let lpd = Date.parse(song.lastplayed);
+        if(song.lastplayed) { lp = new Intl.DateTimeFormat('en').format(lpd); }
+        tblHtml += '<td>' + lp + '</td>';
+        tblHtml += '<td><button class="btn btn-sm btn-secondary" data-artist="' + song.artist.toString() + '" data-title="' + song.title.toString() + '" data-id="' + song.slid + '" onclick="reqSong(this)">Request This Song</button></td>';
         tblHtml += '</tr>';
     }
     tblHtml += '<td colspan=5>';

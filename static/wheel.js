@@ -13,33 +13,7 @@ const LISTENING = false;
 // DEBUG
 
 // SAVEABLE config object!
-var config = {
-    version: 1,
-
-    maxPovertyQueueSize: 100,
-    maxPriorityQueueSize: 100,
-    maxTotalQueueSize: 100,
-
-    wheelLeft: (1920 - 800) / 2,
-    wheelTop: (1080 - 800) / 2,
-    wheelSize: 800,
-    wheelVisible: true,
-
-    queueLeft: 150,
-    queueTop: 20,
-    queueSize: 800,
-    queueVisible: true,
-
-    wheelPalette: [
-        '#3333FF',
-        '#333333',
-        '#FFFF33',
-        '#33FF33',
-        '#FF33FF',
-        '#FF3333',
-        '#33FFFF',
-    ],
-};
+var config = {};
 
 var wheelPaletteIndex = 0;
 
@@ -637,7 +611,7 @@ function refillWheel(e) {
 }
 
 function handleKeys(e) {
-    switch(e.code) {
+    switch (e.code) {
         case 'KeyW':
             toggleWheelVis();
             break;
@@ -659,12 +633,14 @@ window.onload = function () {
     initWheelCanvas();
     resize();
     Update();
+    getConfig();
     loadSongs();
 
     window.addEventListener('resize', resize);
     window.addEventListener('click', canvasClicked);
     window.addEventListener('mousemove', mouseMoved);
     window.addEventListener('keydown', handleKeys);
+    window.addEventListener('beforeunload', saveConfig);
     listen('cbtn', 'click', showHideControls);
     listen('wheelSize', 'input', setWheelSize);
     listen('wheelTop', 'input', setWheelTop);
@@ -679,6 +655,42 @@ window.onload = function () {
         window.setInterval(getRequests, 15000);
     }
 };
+
+function getConfig() {
+    const req = new XMLHttpRequest();
+    req.onload = function () {
+        if (this.responseText == '0') {
+            makeDefaultConfig();
+            saveConfig();
+        } else {
+        let cfgRow = JSON.parse(this.responseText);
+        config = JSON.parse(cfgRow.config);
+        }
+    };
+    req.open('GET', APIURL + '/getconfig');
+    req.send();
+}
+
+function saveConfig() {
+    data = {
+        config: JSON.stringify(config),
+    };
+
+    $.ajax({
+        type: 'POST',
+        url: APIURL + '/saveconfig',
+        data: JSON.stringify(data),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        complete: function (msg) {
+            if (msg.status == 200) {
+                // woo
+            } else {
+                // OH CRAP EVERYTHING IS ON FIRE
+            }
+        }
+    });
+}
 
 function loadSongs() {
     const req = new XMLHttpRequest();
@@ -790,6 +802,36 @@ function getBrightness(rgbstr) {
     let b = parseInt(rgbstr.substr(4, 2), 16) / 255;
     let l = (0.2126 * r + 0.7152 * g + 0.0722 * b);
     return l;
+}
+
+function makeDefaultConfig() {
+    config = {
+        version: 1,
+
+        maxPovertyQueueSize: 100,
+        maxPriorityQueueSize: 100,
+        maxTotalQueueSize: 100,
+
+        wheelLeft: (1920 - 800) / 2,
+        wheelTop: (1080 - 800) / 2,
+        wheelSize: 800,
+        wheelVisible: true,
+
+        queueLeft: 150,
+        queueTop: 20,
+        queueSize: 800,
+        queueVisible: true,
+
+        wheelPalette: [
+            '#3333FF',
+            '#333333',
+            '#FFFF33',
+            '#33FF33',
+            '#FF33FF',
+            '#FF3333',
+            '#33FFFF',
+        ],
+    };
 }
 
 //#endregion Utils and Helpers

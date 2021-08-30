@@ -76,23 +76,23 @@ function dosort(e) {
 }
 
 function writeSongList() {
-    let tblHtml = '<table class="table table-secondary table-hover table-striped"><thead><tr>';
+    let tblHtml = '<table class="table table-secondary table-hover align-middle table-striped"><thead><tr>';
     tblHtml += '<th style="width: 20%" data-field="artist" onclick="dosort(this)">Artist';
     if (sort == -1) { tblHtml += ' ▼'; } 
     if (sort == 1) { tblHtml += ' ▲'; }
     tblHtml += '</th><th style="width: 20%" data-field="title" onclick="dosort(this)">Title';
     if (sort == -2) { tblHtml += ' ▼'; } 
     if (sort == 2) { tblHtml += ' ▲'; }
-    tblHtml += '</th><th style="width: 10%" data-field="plays" onclick="dosort(this)">Play Count';
+    tblHtml += '</th><th style="width: 5%" data-field="plays" onclick="dosort(this)">Plays';
     if (sort == -3) { tblHtml += ' ▼'; } 
     if (sort == 3) { tblHtml += ' ▲'; }
-    tblHtml += '</th><th style="width: 20%" data-field="last" onclick="dosort(this)">Last Played';
+    tblHtml += '</th><th style="width: 10%" data-field="last" onclick="dosort(this)">Last Played';
     if (sort == -4) { tblHtml += ' ▼'; } 
     if (sort == 4) { tblHtml += ' ▲'; }
-    tblHtml += '</th><th style="width: 10%" data-field="pub" onclick="dosort(this)">Published';
+    tblHtml += '</th><th style="width: 5%" data-field="pub" onclick="dosort(this)">Published';
     if (sort == -5) { tblHtml += ' ▼'; } 
     if (sort == 5) { tblHtml += ' ▲'; }
-    tblHtml += '</th><th style="width: 20%"></th>';
+    tblHtml += '</th><th style="width: 40%"></th>';
     tblHtml += '</tr></thead><tbody>';
     let maxLength = Math.min(songlist.length, listOffset + 10);
     let curPage = Math.ceil(listOffset / 10) + 1;
@@ -103,12 +103,15 @@ function writeSongList() {
         tblHtml += '<td>' + song.artist.toString() + '</td>';
         tblHtml += '<td>' + song.title.toString() + '</td>';
         tblHtml += '<td class="text-center">' + song.plays.toString() + '</td>';
-        tblHtml += '<td>' + (song.lastplayed || "Never").toString() + '</td>';
+        let lp = 'Never';
+        let lpd = Date.parse(song.lastplayed);
+        if(song.lastplayed) { lp = new Intl.DateTimeFormat('en').format(lpd); }
+        tblHtml += '<td>' + lp + '</td>';
         tblHtml += '<td><input type="checkbox" ';
         if (song.public) { tblHtml += 'checked '; }
         tblHtml += '/></td><td>';
-        tblHtml += '<button style="margin: 2%;" class="btn btn-secondary" data-id="' + song.slid + '" onclick="editSong(this)">✎ Edit</button>';
-        tblHtml += '<button style="margin: 2%;" class="btn btn-danger" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="deleteSong(this)">✖ Remove</button>';
+        tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-danger" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="deleteSong(this)">✖ Remove</button>';
+        tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-primary" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="queueSong(this)">📝 Queue</button>';
         tblHtml += '</td></tr>';
     }
     tblHtml += '<td colspan=5>';
@@ -171,6 +174,17 @@ function deleteSong(e) {
     });
 }
 
+function queueSong(e) {
+    let slid = e.getAttribute('data-id');
+    let artist = e.getAttribute('data-artist');
+    let title = e.getAttribute('data-title');
+    const req = new XMLHttpRequest();
+    req.onload = function () {
+        makeToast('Request', title + ' by ' + artist + ' added to your queue');
+    };
+    req.open('GET', APIURL + '/addreq?slid=' + slid);
+    req.send();
+}
 
 function saveSong(e) {
     let published = document.getElementById('addsongpublic').checked;
@@ -199,18 +213,6 @@ function saveSong(e) {
         }
     });
 }
-
-/*
-function editSong(e) {
-    let slid = e.getAttribute('data-id');
-    const req = new XMLHttpRequest();
-    req.onload = function () {
-        alert("Aight");
-    };
-    req.open('GET', APIURL + '/addreq?uid=' + USERID + '&slid=' + slid);
-    req.send();
-}
-*/
 
 function addSong(e) {
     $('#addSongModal').modal('show');

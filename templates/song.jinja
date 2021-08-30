@@ -1,0 +1,13 @@
+{% extends 'basepage.jinja' %}
+{% block content %}
+<div class="bg-light p-5 rounded">
+  <h1 id='headline'></h1>
+  <div id='songinfo'>
+  </div>
+</div>
+<script>
+  var uid = {{ g.uid }};
+  var sid = {{ sid }};
+</script>
+<script src='/song.js'></script>
+{% endblock %}

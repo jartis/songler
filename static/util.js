@@ -1,4 +1,4 @@
-const APIURL = 'http://localhost:5000/api/v1';
+const APIURL = '/api/v1';
 
 function makeToast(cat, msg) {
     let toastid = 'toast' + Math.floor(Math.random() * 256).toString(16);

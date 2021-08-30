@@ -1,7 +1,7 @@
 {% extends 'basepage.jinja' %}
 {% block content %}
 <div class="bg-light p-5 rounded">
-  <h1>Manage Songlist for {{ username }}</h1>
+  <h1>Manage Songlist for {{ g.username }}</h1>
       <div id='songlist'>
     </div>
 {% include 'addsongmodal.jinja' %}
@@ -9,6 +9,6 @@
 <div id='songlist'>
 </div>
 </div>
-<script> var uid = {{ uid }}; </script>
+<script> var uid = {{ g.uid }}; </script>
 <script src='/managelist.js'></script>
 {% endblock %}

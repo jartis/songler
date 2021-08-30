@@ -20,7 +20,7 @@ app = Flask(
     static_folder='static'
 )
 
-app.config['DEBUG'] = True
+#app.config['DEBUG'] = True
 app.config['SECRET_KEY'] = appsecret
 app.config['MYSQL_HOST'] = dbhost
 app.config['MYSQL_USER'] = dbuser
@@ -56,10 +56,13 @@ def before_request():
     g.username = None
     g.uid = 0
     g.loggedin = False
+    g.hasOverlay = False
     if 'username' in session:
         g.username = session['username']
         g.loggedin = True
         g.uid = session['uid']
+        if getOverlayConfig() != '0':
+            g.hasoverlay = True
 
 
 @twitchoauth.tokengetter
@@ -127,6 +130,25 @@ def manageSongList():
     else:
         return render_template('error.jinja', error=("No songlist found for user " + g.username), username=g.username, loggedIn=g.loggedin)
 
+
+# User's public profile
+@app.route('/profile/<user>', methods=['GET',])
+def renderProfile(user):
+    user = str(user)
+    cursor = db.connection.cursor()
+    query = 'SELECT uid FROM users WHERE username LIKE %s'
+    cursor.execute(query, [user, ])
+    row = cursor.fetchone()
+    if row is not None:
+        uid = int(row['uid'])
+        return render_template('profile.jinja', uid=g.uid, listuid=uid, listuser=user, username=g.username, loggedIn=g.loggedin)
+    else:
+        return render_template('error.jinja', error=("No user found with the name " + user), username=g.username, loggedIn=g.loggedin)
+
+@app.route('/song/<sid>', methods=['GET',])
+def songInfo(sid):
+    sid = int(sid)
+    return render_template('song.jinja', uid=g.uid, username=g.username, loggedIn=g.loggedin, sid=sid)
 
 #########################
 # Authentication / User #
@@ -218,13 +240,44 @@ def logout():
 # Actual API calls #
 ####################
 
+@app.route('/api/v1/getconfig', methods=['GET', ])
+def getOverlayConfig():
+    if (session['uid']) == 0:
+        return '0'
+    cursor = db.connection.cursor()
+    query = 'SELECT * FROM overlays WHERE uid = %s'
+    cursor.execute(query, (session['uid'],))
+    row = cursor.fetchall()
+    if (len(row) > 0):
+        return jsonify(row[0])
+    return '0';
+
+@app.route('/api/v1/saveconfig', methods=['POST', ])
+def saveOverlayConfig():
+    if (session['uid']) == 0:
+        return '0' # TODO: Do this not-grossly
+    config = request.json['config']
+    uid = session['uid']
+    cursor = db.connection.cursor()
+    query = 'SELECT * FROM overlays WHERE uid = %s'
+    cursor.execute(query, (uid,))
+    result = cursor.fetchall()
+    if len(result) == 0:
+        query = 'INSERT INTO overlays (config, uid) VALUES (%s, %s)'
+    else: 
+        query = 'UPDATE overlays SET config = %s WHERE uid = %s'
+    cursor.execute(query, (config, uid,))
+    db.connection.commit()
+    result = cursor.fetchall()
+    return jsonify(result)
+
 
 @app.route('/api/v1/checkuser/<user>', methods=['GET', ])
 def checkuser(user):
     user = str(user).replace('%', '\%').replace('_', '\_')
     cursor = db.connection.cursor()
     query = 'SELECT uid FROM users WHERE username LIKE %s'
-    cursor.execute(query, [user, ])
+    cursor.execute(query, (user, ))
     row = cursor.fetchone()
     if row is not None:
         return '1'
@@ -325,6 +378,16 @@ def getPublicList():
     result = cursor.fetchall()
     return jsonify(result)
 
+
+@app.route('/api/v1/userinfo/<uid>', methods=['GET'])
+def getUserInfo(uid):
+    cursor = db.connection.cursor()
+    query = 'SELECT username, twitch, signup FROM users WHERE uid = %s'
+    cursor.execute(query, (int(uid),))
+    result = cursor.fetchone()
+    return jsonify(result)
+
+
 # getRequests: Get the list of outstanding requests for a user
 # uid: the user to get requests for
 # limit: the max number of requests to get/clear TODO
@@ -344,7 +407,7 @@ def getRequests():
     query += 'FROM requests INNER JOIN songlists ON requests.uid = songlists.uid '
     query += 'AND requests.slid = songlists.slid INNER JOIN songs ON songs.sid = songlists.sid '
     query += 'INNER JOIN titles ON titles.tid = songs.tid '
-    query += 'INNER JOIN artists ON artists.aid = songs.tid '
+    query += 'INNER JOIN artists ON artists.aid = songs.aid '
     query += 'LEFT JOIN users ON requests.ruid = users.uid '
     query += 'WHERE requests.uid = %s ORDER BY requests.timestamp ASC'
     cursor.execute(query, (uid,))
@@ -393,6 +456,7 @@ def removeRequest():
 
 @app.route('/api/v1/addsong', methods=['POST'])
 def addSong():
+    # TODO: Check session here, you can only add to your own list
     songtitle = request.json['title']
     songartist = request.json['artist']
     public = int(request.json['pub'])
@@ -400,12 +464,58 @@ def addSong():
     link = request.json['link']
     sid = findOrAddSong(songartist, songtitle, link)
     cursor = db.connection.cursor()
-    query = 'INSERT INTO songlists (uid, sid, public) VALUES (%s, %s, %s)'
-    cursor.execute(query, (uid, sid, public,))
+    ytid = getVideoId(link)
+    query = 'INSERT INTO songlists (uid, sid, public, ytid) VALUES (%s, %s, %s, %s)'
+    cursor.execute(query, (uid, sid, public, ytid,))
     db.connection.commit()
     result = cursor.fetchall()
     return jsonify(result)
 
+@app.route('/api/v1/songinfo/<sid>', methods=['GET'])
+def getSongInfo(sid):
+    # First, we get the artist and title
+    song = ''
+    query = 'SELECT artists.artist, titles.title FROM songs '
+    query += 'INNER JOIN artists ON artists.aid = songs.aid '
+    query += 'INNER JOIN titles ON titles.tid = songs.tid '
+    query += 'WHERE songs.sid = %s'
+    cursor = db.connection.cursor()
+    cursor.execute(query, (int(sid),))
+    result = cursor.fetchone()
+    # TODO: Handle a 'None' case gracefully
+    # NEXT, we should get a list of users that have this song on their list?
+    query = 'SELECT DISTINCT username FROM users '
+    query += 'INNER JOIN songlists ON songlists.uid = users.uid '
+    query += 'WHERE songlists.sid = %s AND songlists.public = 1'
+    cursor.execute(query, (int(sid),))
+    result['users'] = cursor.fetchall()
+    # How about a total count of plays?
+    query = 'SELECT SUM(plays) AS totalplays FROM songlists '
+    query += 'WHERE sid = %s'
+    cursor.execute(query, (int(sid),))
+    result['plays'] = int(cursor.fetchone()['totalplays'])
+        # and a most recent play?
+    return jsonify(result)
+
+# Raw list of usernames / uids for search/autocomplete
+@app.route('/api/v1/users', methods=['GET'])
+def getUsers():
+    query = 'SELECT username, uid FROM users'
+    cursor = db.connection.cursor()
+    cursor.execute(query)
+    result = cursor.fetchall()
+    return jsonify(result)
+
+# Raw list of title/artist/sid for search/autocomplete
+@app.route('/api/v1/allsongs', methods=['GET'])
+def getAllSongs():
+    query = 'SELECT artists.artist, titles.title, songs.sid FROM songs '
+    query += 'INNER JOIN artists ON artists.aid = songs.aid '
+    query += 'INNER JOIN titles ON titles.tid = songs.tid'
+    cursor = db.connection.cursor()
+    cursor.execute(query)
+    result = cursor.fetchall()
+    return jsonify(result)
 
 @app.route('/api/v1/delsong', methods=['POST'])
 def removeSongFromList():
@@ -429,21 +539,20 @@ def removeSongFromList():
 
 def addNewUser(username, password, email, uid=-1, tuid=''):
     cursor = db.connection.cursor()
-    if uid == -1:
+    if tuid == '':
         # Create a Username/Password user
-        query = 'INSERT INTO users (username, password, email) VALUES (%s, %s, %s)'
+        query = 'INSERT INTO users (username, password, email, signup) VALUES (%s, %s, %s, CURRENT_TIMESTAMP)'
         cursor.execute(query, (username, password, email,))
         result = cursor.fetchall()
     else:
         # Create a Twitch-based user
-        query = 'INSERT INTO users (uid, username, password, email, twitch) VALUES (%s, %s, %s, %s, %s)'
-        cursor.execute(query, (uid, username, password, email, tuid,))
+        query = 'INSERT INTO users (username, password, email, twitch, signup) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)'
+        cursor.execute(query, (username, password, email, tuid,))
         result = cursor.fetchall()
     query = 'SELECT uid FROM users WHERE username LIKE %s'
     cursor.execute(query, (username,))
     row = cursor.fetchone()
     return int(row['uid'])
-
 
 def getVideoId(link):
     query = urlparse.urlparse(link)
@@ -460,7 +569,7 @@ def getVideoId(link):
     return ''
 
 
-def findOrAddSong(artist, title, link):
+def findOrAddSong(artist, title):
     aid = -1
     tid = -1
     cursor = db.connection.cursor()
@@ -493,9 +602,8 @@ def findOrAddSong(artist, title, link):
     cursor.execute(query, (aid, tid,))
     result = cursor.fetchall()
     if (len(result) == 0):  # SONG doesn't exist
-        ytid = getVideoId(link)
-        query = 'INSERT INTO songs (artist, title, ytid) VALUES (%s, %s, %s)'
-        cursor.execute(query, (aid, tid, ytid))
+        query = 'INSERT INTO songs (artist, title) VALUES (%s, %s, %s)'
+        cursor.execute(query, (aid, tid))
         db.connection.commit()
         query = 'SELECT sid FROM songs WHERE artist = %s AND title = %s'
         cursor.execute(query, (aid, tid,))
@@ -504,4 +612,4 @@ def findOrAddSong(artist, title, link):
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0')

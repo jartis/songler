@@ -1,12 +1,11 @@
 <ul class="navbar-nav ms-auto mb-2 mb-md-0">
-    {% if loggedIn %}
+    {% if g.loggedin %}
     <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" id="dropdown03" data-bs-toggle="dropdown"
-            aria-expanded="true">Hi, {{ username }}!</a>
+            aria-expanded="true">Hi, {{ g.username }}!</a>
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdown03" data-bs-popper="none">
             <li><a class="dropdown-item" href="#">Edit Profile</a></li>
-            <li><a class="dropdown-item" href="#">Another action</a></li>
-            <li><a class="dropdown-item" href="#">Something else here</a></li>
+            <li><a class="dropdown-item" href="/songlist/{{ g.username }}">View My Public Songlist</a></li>
             <li><hr class='dropdown-divider'></li>
             <li><a class="dropdown-item" href="/logout">Logout</a></li>
         </ul>

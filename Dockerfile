@@ -3,6 +3,7 @@ FROM python
 
 # By default, listen on port 5000
 EXPOSE 5000/tcp
+EXPOSE 80
 
 # Set the working directory in the container
 WORKDIR /app

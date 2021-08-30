@@ -196,7 +196,7 @@ def authenticate():
 
 @app.route('/tlogin')
 def login():
-    return twitchoauth.authorize(callback=url_for('authorized', _external=True))
+    return twitchoauth.authorize(callback=url_for('authorized', _external=True, _scheme='https',))
 
 
 @app.route('/tlogin/authorized')

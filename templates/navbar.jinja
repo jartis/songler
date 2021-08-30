@@ -16,15 +16,9 @@
                 </li>
                 {% endif %}
                 {% if g.loggedin %}
-                    {% if g.hasoverlay %}
                     <li class="nav-item">
                         <a class="nav-link" href="/wheel" tabindex="-1">My Stream Overlay</a>
                     </li>
-                    {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="/wheel" tabindex="-1">Create Stream Overlay</a>
-                    </li>
-                    {% endif %}
                 {% endif %}
             </ul>
             <form class="d-flex">

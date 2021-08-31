@@ -1,6 +1,6 @@
 NOTES.md
-dbconf.py
 samplesongs.sql
 __pycache__
 .jshintrc
 .vscode
+launch.json

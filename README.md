@@ -48,10 +48,11 @@ Song picker / request tracker / etc for Twitch
 * Nightbot command integration
 * DDG tabs / lyrics / lead sheet auto search (feeling ducky)
 * CI/CD for pushing to LightSail
-* Change dbconf (secrets) to pull from environment vars
+* Change last played date and play count from song management page
 
 ## Done
 
+* ~~Change dbconf (secrets) to pull from environment vars~~
 * ~~Serve this shiz up someplace public!~~
 * ~~Search options for finding all songs by an artist~~
 * ~~Toggle for Live Request Polling (15s)~~

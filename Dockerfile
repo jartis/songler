@@ -16,13 +16,13 @@ RUN pip install -r requirements.txt
 
 # Copy the content of the local src directory to the working directory
 COPY app.py .
+COPY auth.py .
+COPY api.py .
+COPY render.py .
 COPY serve.py .
+COPY dbconf.py .
 COPY templates ./templates/
 COPY static ./static/
-
-#### TAKE THIS OUT FOR RELEASE ####
-COPY dbconf.py .
-#### TAKE THIS OUT FOR RELEASE ####
 
 # Specify the command to run on container start
 CMD [ "python", "./serve.py" ]

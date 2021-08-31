@@ -1,35 +1,38 @@
 {% extends 'basepage.jinja' %}
 {% block content %}
 <div>{% with messages = get_flashed_messages() %}
-{% if messages %}
-{% for message in messages %}
-<p style="text-align: center; color: #9C27B0;">{{ message }}</p>
-{% endfor %}
-{% endif %}
-{% endwith %}
+    {% if messages %}
+    {% for message in messages %}
+    <p style="text-align: center; color: #9C27B0;">{{ message }}</p>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
 </div>
 <form name='newuser' class='form-signin' onsubmit="return validateForm()" action="/adduser" method="POST">
-  <h1 class="h3 mb-3 fw-normal">Create a new account:</h1>
+    <h1 class="h3 mb-3 fw-normal">Create a new account:</h1>
 
-    <div class="form-floating">
-        <input type="text" class="form-control" name="username" id="username" placeholder="Username" required>
+    <div class="form-group">
         <label for="username">Username</label>
+        <input type="text" class="form-control" name="username" id="username" placeholder="Username" required>
     </div>
-    <div class="form-floating">
-        <input type="email" class="form-control" name="email" id="email" placeholder="Email" required>
+    <div class="form-group">
         <label for="email">Email</label>
+        <input type="email" class="form-control" name="email" id="email" placeholder="Email" required>
     </div>
-    <div class="form-floating">
-        <input type="password" class="form-control" name="password" id="password" placeholder="Password"
-            required>
+    <div class="form-group">
         <label for="password">Password</label>
+        <input type="password" class="form-control" name="password" id="password" placeholder="" required>
     </div>
-        <div class="form-floating">
-        <input type="password" class="form-control" name="passwordconf" id="passwordconf" placeholder="Confirm Password"
-            required>
+    <div class="form-group">
         <label for="passwordconf">Confirm Password</label>
+        <input type="password" class="form-control" name="passwordconf" id="passwordconf" placeholder="" required>
     </div>
     <button class="w-100 btn btn-lg btn-success" type="submit">Save and Sign In</button>
     <script src="/newuser.js"></script>
+    <script type="text/javascript" src="/jquery.passtrength.js"></script>
+    <script>
+        $('#password').passtrength();
+        $('#passwordconf').passtrength();
+    </script>
 </form>
 {% endblock %}

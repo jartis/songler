@@ -11,6 +11,7 @@ const PUB = 5;
 window.onload = function () {
     $('#addSongModal').modal();
     loadList();
+    makeSongBoxesAutoComplete();
 };
 
 function loadList() {
@@ -107,9 +108,9 @@ function writeSongList() {
         let lpd = Date.parse(song.lastplayed);
         if(song.lastplayed) { lp = new Intl.DateTimeFormat('en').format(lpd); }
         tblHtml += '<td>' + lp + '</td>';
-        tblHtml += '<td><input type="checkbox" ';
+        tblHtml += '<td><input type="checkbox" data-id="' + song.slid + '" ';
         if (song.public) { tblHtml += 'checked '; }
-        tblHtml += '/></td><td>';
+        tblHtml += 'onclick="togglepub(this)"/></td><td>';
         tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-danger" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="deleteSong(this)">✖ Remove</button>';
         tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-primary" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="queueSong(this)">📝 Queue</button>';
         tblHtml += '</td></tr>';
@@ -152,6 +153,17 @@ function nextPage() {
 function lastPage() {
     listOffset = songlist.length - 10;
     writeSongList();
+}
+
+function togglepub(e) {
+    let pub = e.checked;
+    let slid = e.getAttribute('data-id');
+    const req = new XMLHttpRequest();
+    req.onload = function () {
+        loadList();
+    };
+    req.open('GET', APIURL + '/setsongpub/' + slid + '/' + (pub ? 1 : 0));
+    req.send();
 }
 
 function deleteSong(e) {
@@ -218,3 +230,34 @@ function addSong(e) {
     $('#addSongModal').modal('show');
 }
 
+function makeSongBoxesAutoComplete() {
+    const treq = new XMLHttpRequest();
+    treq.onload = function () {
+        let titlelist = JSON.parse(this.responseText);
+        let tlist = [];
+        for (let i = 0; i < titlelist.length; i++) {
+            tlist.push({label: titlelist[i].title, value: titlelist[i].title});
+        }
+        let titlebox = new Autocomplete(document.getElementById('addsongtitle'), {
+            data: tlist,
+            maximumItems: 10,
+        });
+    };
+    treq.open('GET', APIURL + '/alltitles');
+    treq.send();
+
+    const areq = new XMLHttpRequest();
+    areq.onload = function () {
+        let artistlist = JSON.parse(this.responseText);
+        let alist = [];
+        for (let i = 0; i < artistlist.length; i++) {
+            alist.push({label: artistlist[i].artist, value: artistlist[i].artist});
+        }
+        let artistbox = new Autocomplete(document.getElementById('addsongartist'), {
+            data: alist,
+            maximumItems: 10,
+        });
+    };
+    areq.open('GET', APIURL + '/allartists');
+    areq.send();
+}

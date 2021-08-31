@@ -1,4 +1,4 @@
-from app import app, db
+from app import app, db, addNewUser, getVideoId, findOrAddSong
 import api
 import auth
 import random
@@ -102,3 +102,13 @@ def songInfo(sid):
     """
     sid = int(sid)
     return render_template('song.jinja', uid=g.uid, username=g.username, loggedIn=g.loggedin, sid=sid)
+
+
+@app.route('/artist/<aid>', methods=['GET', ])
+def artistInfo(aid):
+    """
+    Gets an artist's "Profile Page".
+    <aid> - Artist ID for the relevant song.
+    """
+    aid = int(aid)
+    return render_template('artist.jinja', uid=g.uid, username=g.username, loggedIn=g.loggedin, aid=aid)

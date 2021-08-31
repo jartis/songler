@@ -14,13 +14,15 @@ window.onload = function () {
 function writeSongInfo() {
     document.getElementById('headline').innerText = songinfo.title + ' by ' + songinfo.artist;
     let si = '';
-    si += '<p>Total plays: ' + songinfo.plays + '</p>'
+    si += '<p>Total plays: ' + songinfo.plays + '</p><hr>'
     // Who has this on their songlist?
     if (songinfo.users.length > 0) {
         si += '<h3>Users that play ' + songinfo.title + ':</h3>';
         for (let i = 0; i < songinfo.users.length; i++) {
             si += '<p><a href="/songlist/' + songinfo.users[i].username + '">' + songinfo.users[i].username + '</a></p>';
         }
+    } else {
+        si += '<p>No users with ' + songinfo.title + ' on their public song list.</p>';
     }
     document.getElementById('songinfo').innerHTML = si;
 }

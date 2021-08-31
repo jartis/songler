@@ -1,4 +1,4 @@
-from app import app, db
+from app import app, db, addNewUser, getVideoId, findOrAddSong
 import api
 import render
 import random

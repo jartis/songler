@@ -26,11 +26,9 @@ Song picker / request tracker / etc for Twitch
 * Based on normalization, "fun reports" like most played artists?
 * Error handling for adding song that is already on user's songlist
 * Error handling for adding song if the server catches fire
-* Serve this shiz up someplace public!
 * Limits on requests for non logged in users
 * Limits on requests for logged in users
 * Toggle "Allow anonymous requests"
-* Search options for finding all songs by an artist
 * Center search box in navbar somehow? (It moves based on username length)
 * Add Fields to Personal profile
 * Link Twitch account to existing account
@@ -38,7 +36,6 @@ Song picker / request tracker / etc for Twitch
 * Password strength on user registration page
 * Add toggle for "wheel-able" songs, separate from public
 * Request queue page that is NOT the wheel overlay (with the youtube link, etc)
-* Search and update fields when adding songs (pull ytid with artist/title)
 * Maybe document the db structure in a good formal way?
 * "Object" out the, y'know, objects in the python backend
 * Put a toaster on the wheel page!!!
@@ -47,12 +44,18 @@ Song picker / request tracker / etc for Twitch
 * Fix displayname on songlist page (Use DB Canonicalization)
 * Password changing / recovery
 * Track separate usernames per system? (DisplayName independent?)
-* Toggle for Live Request Polling (15s)
-* Display page for Artists (all songs by, etc)
 * Add most recent 'Last Played' to song info page
+* Nightbot command integration
+* DDG tabs / lyrics / lead sheet auto search (feeling ducky)
+* CI/CD for pushing to LightSail
+* Change dbconf (secrets) to pull from environment vars
 
 ## Done
 
+* ~~Serve this shiz up someplace public!~~
+* ~~Search options for finding all songs by an artist~~
+* ~~Toggle for Live Request Polling (15s)~~
+* ~~Display page for Artists (all songs by, etc)~~
 * ~~Edit songs from list~~ - No editing songs on list. Delete/readd to keep "songs" up to date.
 * ~~Save display configuration~~
 * ~~Public profile pages? (Or links to pages in search)~~

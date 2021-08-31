@@ -19,9 +19,23 @@ function populateSearch() {
             optlist.push(entry);
         }
     };
-    req.open('GET', APIURL + '/users');
+    req.open('GET', APIURL + '/allusers');
     req.send();
     // Add the songs
+    const areq = new XMLHttpRequest();
+    areq.onload = function() {
+        let rawlist = JSON.parse(this.responseText);
+        for (let i = 0; i < rawlist.length; i++) {
+            let entry = {
+                label: 'Artist: ' + rawlist[i].artist,
+                value: '/artist/' + rawlist[i].aid,
+            }
+            optlist.push(entry);
+        }
+    };
+    areq.open('GET', APIURL + '/allartists');
+    areq.send();
+
     const sreq = new XMLHttpRequest();
     sreq.onload = function () {
         let rawlist = JSON.parse(this.responseText);

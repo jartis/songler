@@ -13,14 +13,7 @@ window.onload = function () {
         songlist = JSON.parse(this.responseText);
         writeSongList();
     };
-    // TODO: Move requesting private songs to the manage page, methinks
-    // if (uid == listuid) {
-    //     // Get ALL the songs for onesself.
-    //     // TODO: Mark this somehow
-    //     req.open('GET', APIURL + '/allsongs/' + uid);
-    // } else {
-        req.open('GET', APIURL + '/getpubsongs?uid=' + listuid);
-    // }
+    req.open('GET', APIURL + '/getpubsongs?uid=' + listuid);
     req.send();
 };
 

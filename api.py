@@ -1,4 +1,4 @@
-from app import app, db
+from app import app, db, addNewUser, getVideoId, findOrAddSong
 import auth
 import render
 import random
@@ -274,13 +274,39 @@ def addSong():
     return jsonify(result)
 
 
+@app.route('/api/v1/artistinfo/<aid>', methods=['GET'])
+def getArtistInfo(aid):
+    """
+    Gets artist 'profile' info for a specified artist id.
+    <aid> - Artist ID to get profile page for.
+    """
+    query =  'SELECT artist FROM artists '
+    query += 'WHERE artists.aid = %s'
+    cursor = db.connection.cursor()
+    cursor.execute(query, (int(aid),))
+    result = cursor.fetchone()
+    # Get the other songs from this artist
+    query =  'SELECT titles.title, songs.sid FROM songs '
+    query += 'INNER JOIN titles ON songs.tid = titles.tid '
+    query += 'WHERE songs.aid = %s'
+    cursor.execute(query, (int(aid),))
+    result['songs'] = cursor.fetchall()
+    # TODO: Get streamers that play this artist
+    query =  'SELECT DISTINCT username FROM users '
+    query += 'INNER JOIN songlists ON songlists.uid = users.uid '
+    query += 'INNER JOIN songs ON songlists.sid = songs.sid '
+    query += 'WHERE songs.aid = %s AND songlists.public = TRUE'
+    cursor.execute(query, (int(aid),))
+    result['users'] = cursor.fetchall()
+    return jsonify(result)
+
+
 @app.route('/api/v1/songinfo/<sid>', methods=['GET'])
 def getSongInfo(sid):
     """
-    Gets song 'profile' info for a specified songid.
+    Gets song 'profile' info for a specified song id.
     <sid> - Song ID to get profile page for.
     """
-    song = ''
     query = 'SELECT artists.artist, titles.title FROM songs '
     query += 'INNER JOIN artists ON artists.aid = songs.aid '
     query += 'INNER JOIN titles ON titles.tid = songs.tid '
@@ -304,12 +330,34 @@ def getSongInfo(sid):
     return jsonify(result)
 
 
-@app.route('/api/v1/users', methods=['GET'])
+@app.route('/api/v1/allusers', methods=['GET'])
 def getUsers():
     """
     Get a raw list of usernames and uids for populating autocomplete box.
     """
     query = 'SELECT username, uid FROM users'
+    cursor = db.connection.cursor()
+    cursor.execute(query)
+    result = cursor.fetchall()
+    return jsonify(result)
+
+@app.route('/api/v1/allartists', methods=['GET'])
+def getArtists():
+    """
+    Get a raw list of artists and aids for populating autocomplete box.
+    """
+    query = 'SELECT artist, aid FROM artists'
+    cursor = db.connection.cursor()
+    cursor.execute(query)
+    result = cursor.fetchall()
+    return jsonify(result)
+
+@app.route('/api/v1/alltitles', methods=['GET'])
+def getTitles():
+    """
+    Get a raw list of titles for populating autocomplete box.
+    """
+    query = 'SELECT title FROM titles'
     cursor = db.connection.cursor()
     cursor.execute(query)
     result = cursor.fetchall()
@@ -347,5 +395,20 @@ def getAllSongs():
     query += 'INNER JOIN titles ON titles.tid = songs.tid'
     cursor = db.connection.cursor()
     cursor.execute(query)
+    result = cursor.fetchall()
+    return jsonify(result)
+
+@app.route('/api/v1/setsongpub/<slid>/<pub>', methods=['GET'])
+def setSongPub(slid, pub):
+    """
+    Sets a songlist entry to public or non-public, if the session GUID matches the songlist entry owner.
+    <slid> - Songlist entry to update
+    <pub> - 1 or 0 (for True or False)
+    NOTE: Fails silently if session UID doesn't match song owner UID.
+    """
+    query =  'UPDATE songlists SET public = %s '
+    query += 'WHERE slid = %s AND uid = %s'
+    cursor = db.connection.cursor()
+    cursor.execute(query, (int(pub), int(slid), session['uid']))
     result = cursor.fetchall()
     return jsonify(result)

@@ -498,6 +498,9 @@ function removeRequest(rid) {
 }
 
 function getRequests() {
+    if (config.dopoll == false) {
+        return;
+    }
     const req = new XMLHttpRequest();
     req.onload = function () {
         let reqs = JSON.parse(this.responseText);
@@ -587,6 +590,10 @@ function toggleQueueVis(e) {
     document.getElementById('queueVis').checked = config.queueVisible;
 }
 
+function setPoll(e) {
+    config.dopoll = document.getElementById('doPoll').checked;
+}
+
 function refillWheel(e) {
     let songsToGet = maxWheel - songlist.length;
     let curList = [];
@@ -641,6 +648,7 @@ window.onload = function () {
     window.addEventListener('mousemove', mouseMoved);
     window.addEventListener('keydown', handleKeys);
     window.addEventListener('beforeunload', saveConfig);
+    window.setInterval(getRequests, 15000);
     listen('cbtn', 'click', showHideControls);
     listen('wheelSize', 'input', setWheelSize);
     listen('wheelTop', 'input', setWheelTop);
@@ -650,10 +658,7 @@ window.onload = function () {
     listen('queueLeft', 'input', setQueueLeft);
     listen('wheelRefill', 'click', refillWheel);
     listen('wheelVis', 'input', toggleWheelVis);
-
-    if (LISTENING) {
-        window.setInterval(getRequests, 15000);
-    }
+    listen('doPoll', 'input', setPoll);
 };
 
 function getConfig() {
@@ -804,9 +809,16 @@ function getBrightness(rgbstr) {
     return l;
 }
 
+function updateConfig() {
+    if (config.version == 1) {
+        config.version = 2;
+        config.dopoll = true;
+    }
+}
+
 function makeDefaultConfig() {
     config = {
-        version: 1,
+        version: 2,
 
         maxPovertyQueueSize: 100,
         maxPriorityQueueSize: 100,
@@ -831,6 +843,8 @@ function makeDefaultConfig() {
             '#FF3333',
             '#33FFFF',
         ],
+
+        dopoll = false,
     };
 }
 

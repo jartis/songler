@@ -7,6 +7,7 @@ const TITLE = 2;
 const PLAYS = 3;
 const LAST = 4;
 const PUB = 5;
+const WHEEL = 6;
 
 window.onload = function () {
     $('#addSongModal').modal();
@@ -72,6 +73,15 @@ function dosort(e) {
                 songlist.sort((a, b) => ((a.public === b.public) ? 0 : a.public?-1:1));
             }
             break;
+            case 'wheel':
+                if (sort == WHEEL) {
+                    sort = -WHEEL;
+                    songlist.sort((b, a) => ((a.wheel === b.wheel) ? 0 : a.wheel?-1:1));
+                } else {
+                    sort = WHEEL;
+                    songlist.sort((a, b) => ((a.wheel === b.wheel) ? 0 : a.wheel?-1:1));
+                }
+                break;
     }
     writeSongList();
 }
@@ -90,10 +100,13 @@ function writeSongList() {
     tblHtml += '</th><th style="width: 10%" data-field="last" onclick="dosort(this)">Last Played';
     if (sort == -4) { tblHtml += ' ▼'; } 
     if (sort == 4) { tblHtml += ' ▲'; }
-    tblHtml += '</th><th style="width: 5%" data-field="pub" onclick="dosort(this)">Published';
+    tblHtml += '</th><th style="width: 5%" data-field="pub" onclick="dosort(this)">Public';
     if (sort == -5) { tblHtml += ' ▼'; } 
     if (sort == 5) { tblHtml += ' ▲'; }
-    tblHtml += '</th><th style="width: 40%"></th>';
+    tblHtml += '</th><th style="width: 5%" data-field="wheel" onclick="dosort(this)">On Wheel';
+    if (sort == -6) { tblHtml += ' ▼'; } 
+    if (sort == 6) { tblHtml += ' ▲'; }
+    tblHtml += '</th><th style="width: 35%"></th>';
     tblHtml += '</tr></thead><tbody>';
     let maxLength = Math.min(songlist.length, listOffset + 10);
     let curPage = Math.ceil(listOffset / 10) + 1;
@@ -108,51 +121,66 @@ function writeSongList() {
         let lpd = Date.parse(song.lastplayed);
         if(song.lastplayed) { lp = new Intl.DateTimeFormat('en').format(lpd); }
         tblHtml += '<td>' + lp + '</td>';
-        tblHtml += '<td><input type="checkbox" data-id="' + song.slid + '" ';
+        tblHtml += '<td class="text-center"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" data-id="' + song.slid + '" ';
         if (song.public) { tblHtml += 'checked '; }
-        tblHtml += 'onclick="togglepub(this)"/></td><td>';
-        tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-danger" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="deleteSong(this)">✖ Remove</button>';
-        tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-primary" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="queueSong(this)">📝 Queue</button>';
+        tblHtml += 'onclick="togglepub(this)"/></div></td>';
+        tblHtml += '<td class="text-center"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" data-id="' + song.slid + '" ';
+        if (song.wheel) { tblHtml += 'checked '; }
+        tblHtml += 'onclick="togglewheel(this)"/></div></td>';
+        tblHtml += '<td><button style="margin: 2%;" class="btn btn-sm btn-danger" data-artist="' + song.artist + '" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="deleteSong(this)">✖ Remove</button>';
+        tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-primary" data-artist="' + song.artist + '" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="queueSong(this)">📝 Queue</button>';
         tblHtml += '</td></tr>';
     }
-    tblHtml += '<td colspan=5>';
+    tblHtml += '<td colspan=7>';
     tblHtml += '<span style="width: 20%; margin: auto; padding:2%;">';
-    tblHtml += '<button type="button" onclick="firstPage();" class="btn btn-secondary">« First Page</button>';
+    tblHtml += '<button id="fp" type="button" onclick="firstPage();" class="btn btn-secondary">« First Page</button>';
     tblHtml += '</span>';
     tblHtml += '<span style="width: 20%; margin: auto; padding:2%;">';
-    tblHtml += '<button type="button" onclick="prevPage();" class="btn btn-secondary">‹ Prev Page</button>';
+    tblHtml += '<button id="pp" type="button" onclick="prevPage();" class="btn btn-secondary">‹ Prev Page</button>';
     tblHtml += '</span>';
     tblHtml += '<span style="width: 20%; margin: auto; padding:2%;">';
     tblHtml += '<span>' + curPage.toString() + ' / ' + lastPage.toString() + '</span>';
     tblHtml += '</span>';
     tblHtml += '<span style="width: 20%; margin: auto; padding:2%;">';
-    tblHtml += '<button type="button" onclick="nextPage();" class="btn btn-secondary">Next Page ›</button>';
+    tblHtml += '<button id="np" type="button" onclick="nextPage();" class="btn btn-secondary">Next Page ›</button>';
     tblHtml += '</span>';
     tblHtml += '<span style="width: 20%; margin: auto; padding:2%;">';
-    tblHtml += '<button type="button" onclick="lastPage();" class="btn btn-secondary">Last Page »</button></td>';
+    tblHtml += '<button id="lp" type="button" onclick="lastPage();" class="btn btn-secondary">Last Page »</button></td>';
     tblHtml += '</span>';
-    tblHtml += '<td><button onclick="addSong(this)">Add Song</button></td>';
     tblHtml += '</tbody></table>';
+    tblHtml += '<button onclick="addSong(this)">Add Song</button>';
     document.getElementById('songlist').innerHTML = tblHtml;
 }
 
+function fixPageButtons() {
+    $("fp").hide();
+    $("pp").hide();
+    $("np").hide();
+    $("lp").hide();
+    if (listOffset > 0) { $("fp").show(); $("pp").show(); }
+    if (listOffset < songlist.length - 10) { $("np").show(); $("lp").show(); }
+}
 function firstPage() {
     listOffset = 0;
     writeSongList();
+    fixPageButtons();
 }
 function prevPage() {
     listOffset -= 10;
     if (listOffset < 0) { listOffset = 0; }
     writeSongList();
+    fixPageButtons();
 }
 function nextPage() {
     listOffset += 10;
     if (listOffset > songlist.length) { listOffset = songlist.length - 10; }
     writeSongList();
+    fixPageButtons();
 }
 function lastPage() {
     listOffset = songlist.length - 10;
     writeSongList();
+    fixPageButtons();
 }
 
 function togglepub(e) {
@@ -163,6 +191,17 @@ function togglepub(e) {
         loadList();
     };
     req.open('GET', APIURL + '/setsongpub/' + slid + '/' + (pub ? 1 : 0));
+    req.send();
+}
+
+function togglewheel(e) {
+    let wheel = e.checked;
+    let slid = e.getAttribute('data-id');
+    const req = new XMLHttpRequest();
+    req.onload = function () {
+        loadList();
+    };
+    req.open('GET', APIURL + '/setsongwheel/' + slid + '/' + (wheel ? 1 : 0));
     req.send();
 }
 
@@ -177,10 +216,10 @@ function deleteSong(e) {
         dataType: "json",
         complete: function (msg) {
             if (msg.status == 200) {
-                makeToast('Success', title + ' has been removed from your list.');
+                makeToast(SUCCESS, '❌ Success', title + ' has been removed from your list.');
                 loadList();
             } else {
-                makeToast('Error', title + ' could not be removed from your list.');
+                makeToast(ERROR, '⚠️ Error', title + ' could not be removed from your list.');
             }
         }
     });
@@ -192,9 +231,15 @@ function queueSong(e) {
     let title = e.getAttribute('data-title');
     const req = new XMLHttpRequest();
     req.onload = function () {
-        makeToast('Request', title + ' by ' + artist + ' added to your queue');
+        if (this.responseText == 'OK') {
+            makeToast(SUCCESS, '✔️ Success', title + ' by ' + artist + ' added to your queue');
+        } else if (this.responseText == 'QF') {
+            makeToast(SUCCESS, '✔️ Success', title + ' by ' + artist + ' added to your queue');
+        } else if (this.responseText == 'NS') {
+            makeToast(SUCCESS, '✔️ Success', title + ' by ' + artist + ' added to your queue');
+        }
     };
-    req.open('GET', APIURL + '/addreq?slid=' + slid);
+    req.open('GET', APIURL + '/addreq/' + slid);
     req.send();
 }
 
@@ -215,12 +260,12 @@ function saveSong(e) {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         complete: function (msg) {
-            if (msg.status == 200) {
-                $('#addSongModal').modal('hide');
-                makeToast('Success', 'Your song has been added successfully!');
-                loadList();
+            if (this.responseText == 'QF') {
+                makeToast(ERROR, '⚠️ Error', 'You already have a request in the queue for this user.');
+            } else if (this.responseText == 'OK') {
+                makeToast(SUCCESS, '✔️ Success', 'Your request for ' + title + ' by ' + artist + ' has been placed!');
             } else {
-                // OH CRAP EVERYTHING IS ON FIRE
+                makeToast(ERROR, '⚠️ Error', 'Something weird happened...');
             }
         }
     });

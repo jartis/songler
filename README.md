@@ -18,7 +18,6 @@ Song picker / request tracker / etc for Twitch
 * Configuration for wheel palettes / random wheel colors
 * No adjacent wheel slots with matching colors
 * Show selected title on hover (Different from spinner title)
-* Request security and whatnot
 * "Last Ignored"? Recently ignored songs should creep up less frequently?
 * Toggle resquester name display
 * Lock in "config mode" to ignore canvas clicks?
@@ -27,15 +26,10 @@ Song picker / request tracker / etc for Twitch
 * Error handling for adding song that is already on user's songlist
 * Error handling for adding song if the server catches fire
 * Limits on requests for non logged in users
-* Limits on requests for logged in users
 * Toggle "Allow anonymous requests"
-* Center search box in navbar somehow? (It moves based on username length)
 * Add Fields to Personal profile
 * Link Twitch account to existing account
 * Link streamlabs account? Other accounts?
-* Password strength on user registration page
-* Add toggle for "wheel-able" songs, separate from public
-* Request queue page that is NOT the wheel overlay (with the youtube link, etc)
 * Maybe document the db structure in a good formal way?
 * "Object" out the, y'know, objects in the python backend
 * Put a toaster on the wheel page!!!
@@ -49,9 +43,17 @@ Song picker / request tracker / etc for Twitch
 * DDG tabs / lyrics / lead sheet auto search (feeling ducky)
 * CI/CD for pushing to LightSail
 * Change last played date and play count from song management page
+* Document the wheel features a little better...
+* Update breadcrumbs / navbar when on appropriate page
 
 ## Done
 
+* ~~Request queue page that is NOT the wheel overlay (with the youtube link, etc)~~
+* ~~Center search box in navbar somehow? (It moves based on username length)~~ I just moved it.
+* ~~Add toggle for "wheel-able" songs, separate from public~~
+* ~~Limits on requests for logged in users~~
+* ~~Request security and whatnot~~
+* ~~Password strength on user registration page~~
 * ~~Change dbconf (secrets) to pull from environment vars~~
 * ~~Serve this shiz up someplace public!~~
 * ~~Search options for finding all songs by an artist~~
@@ -94,9 +96,9 @@ Song picker / request tracker / etc for Twitch
 * ~~Configuration for wheel position/size~~
 * ~~Error handling on click-to-play~~
 * ~~"Play" from queue vs. "Remove" from queue~~
-  * ~~Change play count for "Played", not for "Removed"~~
-  * ~~Update "Last Played" on "Play"~~
-  * ~~Reveal "Remove" X on hover over song?~~
+* ~~Change play count for "Played", not for "Removed"~~
+* ~~Update "Last Played" on "Play"~~
+* ~~Reveal "Remove" X on hover over song?~~
 * ~~Pull songs from external source~~
 * ~~Chime on wheel stop?~~
 * ~~Fixed number of audio clones to prevent too much overlap~~

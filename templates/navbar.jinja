@@ -1,31 +1,40 @@
 <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="#">Minstrelize</a>
+        <a class="navbar-brand" href="/">Minstrelize</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
             aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav me-auto mb-2 mb-md-0">
-                <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/">Home</a>
+                <form class="d-flex me-1">
+                    <input class="form-control mx-2" id="srch" name="srch" type="search" placeholder="Search"
+                        autocomplete="off" aria-label="Search">
+                    <button class="btn btn-outline-success" type="submit">Search</button>
+                </form>
+                <li class="nav-item mx-1">
+                    <a class="btn btn-secondary" aria-current="page" href="/">Home</a>
                 </li>
                 {% if g.loggedin %}
-                <li class="nav-item">
-                    <a class="nav-link" href="/managelist">Manage My Songlist</a>
+                <li class="nav-item mx-1">
+                    <a class="btn btn-secondary" href="/managelist">Songlist Manager</a>
+                </li>
+                {% endif %}
+                {% if g.count > 0 %}
+                <li class="nav-item mx-1">
+                    <a class="btn btn-secondary" href="/requests" tabindex="-1">Request Manager
+                        <span class="badge rounded-pill bg-danger">
+                            {{ g.count }}
+                        </span>
+                    </a>
                 </li>
                 {% endif %}
                 {% if g.loggedin %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="/wheel" tabindex="-1">My Stream Overlay</a>
-                    </li>
+                <li class="nav-item mx-1">
+                    <a class="btn btn-secondary" href="/wheel" tabindex="-1">Stream Overlay</a>
+                </li>
                 {% endif %}
             </ul>
-            <form class="d-flex">
-                <input class="form-control me-2" id="srch" name="srch" type="search" placeholder="Search"
-                autocomplete="off" aria-label="Search">
-                <button class="btn btn-outline-success" type="submit">Search</button>
-            </form>
             {% include 'auth.jinja' %}
         </div>
 </nav>

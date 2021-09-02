@@ -82,6 +82,38 @@ def authenticate():
             flash('Invalid Username or Password')
             return render_template('login.jinja', username=g.username, loggedIn=g.loggedin)
 
+@app.route('/tlink')
+def twitchlink():
+    """
+    Endpoint for linking Twitch account to existing account.
+    """
+    return twitchoauth.authorize(callback=url_for('tlinkok', _external=True, _scheme=app.config['SCHEME'],))
+
+@app.route('/tlinkok')
+def tlinkok():
+    """
+    Callback endpoint for Twitch OAuth login.
+    Creates new user if necessary and logs them in.
+    """
+    if (session['uid'] == 0):
+        return render_template('error.jinja', error=('You must be logged in to perform this action'))
+    resp = twitchoauth.authorized_response()
+    if resp is None:
+        return render_template('error.jinja', error=('Error linking account: ' + request.args['error'] + ' - ' + request.args['error_description']))
+    twitchclient = TwitchHelix(client_id=twitchClientId, oauth_token=resp['access_token'])
+    twitchuser = twitchclient.get_users()
+    twitchuid = twitchuser[0]['id']
+    # Set the current user's tuid
+    cursor = db.connection.cursor()
+    query = 'UPDATE users SET tuid = %s WHERE uid = %s'
+    cursor.execute(query, [twitchuid, session['uid']])
+    row = cursor.fetchone()
+    session['uid'] = uid
+    session['loggedIn'] = True
+    session['username'] = username
+    session['tuid'] = twitchuid
+    return redirect(url_for('renderHome'))
+
 
 @app.route('/tlogin')
 def login():
@@ -100,8 +132,7 @@ def authorized():
     resp = twitchoauth.authorized_response()
     if resp is None:
         return render_template('error.jinja', error=('Error logging in: ' + request.args['error'] + ' - ' + request.args['error_description']))
-    twitchclient = TwitchHelix(
-        client_id=twitchClientId, oauth_token=resp['access_token'])
+    twitchclient = TwitchHelix(client_id=twitchClientId, oauth_token=resp['access_token'])
     twitchuser = twitchclient.get_users()
     username = twitchuser[0]['display_name']
     twitchuid = twitchuser[0]['id']

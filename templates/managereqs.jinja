@@ -1,11 +1,10 @@
 {% extends 'basepage.jinja' %}
 {% block content %}
 <div class="bg-light p-5 rounded">
-  <h1>Manage Songlist for {{ g.username }}</h1>
-      <div id='songlist'>
+  <h1>Manage Requests for {{ g.username }}</h1>
+      <div id='reqlist'>
     </div>
 </div>
-{% include 'addsongmodal.jinja' %}
 <script> var uid = {{ g.uid }}; </script>
-<script src='/managelist.js'></script>
+<script src='/managereqs.js'></script>
 {% endblock %}

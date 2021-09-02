@@ -37,10 +37,12 @@ def before_request():
     g.username = None
     g.uid = 0
     g.loggedin = False
+    g.count = 0
     if 'username' in session:
         g.username = session['username']
         g.loggedin = True
         g.uid = session['uid']
+        g.count = reqCount(g.uid)
 
 ####################
 # Helper functions #
@@ -48,6 +50,14 @@ def before_request():
 
 
 def addNewUser(username, password, email, uid=-1, tuid=''):
+    """
+    Adds a new user entry to the database.
+    <username>: Desired username for new account.
+    <password>: Password for new account. Blank if created with an OAuth provider.
+    <email>: Email account to attach to new user. Populated from OAuth provider if possible.
+    <uid>: Defaults to -1. If provided, sets UID in DB, if -1, use the Auto-Increment.
+    <tuid>: Twitch UID, if account was created with Twitch OAuth.
+    """
     cursor = db.connection.cursor()
     if tuid == '':
         # Create a Username/Password user
@@ -66,6 +76,10 @@ def addNewUser(username, password, email, uid=-1, tuid=''):
 
 
 def getVideoId(link):
+    """
+    Takes a youtube link and returns the trimmed video ID.
+    <link>: The youtube link to parse.
+    """
     query = urlparse.urlparse(link)
     if query.hostname == 'youtu.be':
         return query.path[1:]
@@ -79,8 +93,23 @@ def getVideoId(link):
             return query.path.split('/')[2]
     return ''
 
+def reqCount(uid):
+    """
+    Get count of requests for a user
+    """
+    cursor = db.connection.cursor()
+    query =  'SELECT COUNT(*) as count FROM requests '
+    query += 'WHERE uid = %s'
+    cursor.execute(query, (uid,))
+    result = cursor.fetchone()['count']
+    return result
 
 def findOrAddSong(artist, title):
+    """
+    Returns a SID for a song, with appropriate artist and title AID and TID values, created new if necessary.
+    <artist>: Name of the artist to find or create the AID for.
+    <title>: Title of the song to find or create the TID for.
+    """
     aid = -1
     tid = -1
     cursor = db.connection.cursor()

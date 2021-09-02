@@ -452,6 +452,7 @@ function canvasClicked(e) {
                     console.log('Deleted priority song index ' + queueIndex);
                     rpt_skippedSongs.push(priorityQueue[queueIndex].slid);
                     priorityQueue.splice(queueIndex, 1);
+                    removeRequest(priorityQueue[queueIndex].rid);
                     mouseMoved(e); return;
                 }
             }
@@ -465,10 +466,10 @@ function canvasClicked(e) {
                 }
                 mouseMoved(e); return;
             } else {
-
                 console.log('Deleted standard song index ' + queueIndex);
                 rpt_skippedSongs.push(povertyQueue[queueIndex].slid);
                 povertyQueue.splice(queueIndex, 1);
+                removeRequest(povertyQueue[queueIndex].rid);
                 mouseMoved(e); return;
             }
         }
@@ -481,11 +482,16 @@ function playSong(song) {
     // req.onload = function () {
     //     return true;
     // };
-    req.open('GET', APIURL + '/play?sid=' + song.slid, false);
+    req.open('GET', APIURL + '/play/' + song.slid, false);
     req.send();
     if (req.status == 200) {
+        if (song.rid) {
+            removeRequest(song.rid);
+        }
         return true;
     }
+    const rreq = new XMLHttpRequest();
+
     console.log('Error storing song play in DB');
     return false;
 }
@@ -493,7 +499,7 @@ function playSong(song) {
 function removeRequest(rid) {
     const req = new XMLHttpRequest();
     req.onload = function () { };
-    req.open('GET', APIURL + '/removereq?rid=' + rid);
+    req.open('GET', APIURL + '/removereq/' + rid);
     req.send();
 }
 
@@ -506,16 +512,16 @@ function getRequests() {
         let reqs = JSON.parse(this.responseText);
         for (let i = 0; i < reqs.length; i++) {
             let song = reqs[i];
-            if (song.username == null) {
-                song.username = 'Anonymous';
+            if (song.rname == null) {
+                song.rname = 'Anonymous';
             }
             // Add the song to the queue
             if (tryAddSongToQueue(song, song.prio)) {
-                removeRequest(song.rid);
+                // Don't remove the req yet!
             }
         }
     };
-    req.open('GET', APIURL + '/getreqs?uid=' + uid);
+    req.open('GET', APIURL + '/getreqs');
     req.send();
 }
 
@@ -668,8 +674,8 @@ function getConfig() {
             makeDefaultConfig();
             saveConfig();
         } else {
-        let cfgRow = JSON.parse(this.responseText);
-        config = JSON.parse(cfgRow.config);
+            let cfgRow = JSON.parse(this.responseText);
+            config = JSON.parse(cfgRow.config);
         }
     };
     req.open('GET', APIURL + '/getconfig');
@@ -844,7 +850,7 @@ function makeDefaultConfig() {
             '#33FFFF',
         ],
 
-        dopoll = false,
+        dopoll: false,
     };
 }
 

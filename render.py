@@ -35,7 +35,7 @@ def renderWheel():
     """
     if g.uid is None:
         return render_template('error.jinja', error=("You must be logged in to view your overlay"))
-    return render_template('wheel.jinja', uid=g.uid, username=g.username, loggedIn=g.loggedin)
+    return render_template('wheel.jinja')
 
 
 @app.route('/')
@@ -44,7 +44,7 @@ def renderHome():
     """
     Shows the homepage.
     """
-    return render_template('home.jinja', username=g.username, loggedIn=g.loggedin)
+    return render_template('home.jinja')
 
 
 @app.route('/songlist/<user>', methods=['GET', ])
@@ -60,9 +60,9 @@ def showSongList(user):
     row = cursor.fetchone()
     if row is not None:
         uid = int(row['uid'])
-        return render_template('requestlist.jinja', uid=g.uid, listuid=uid, listuser=user, username=g.username, loggedIn=g.loggedin)
+        return render_template('requestlist.jinja', listuid=uid, listuser=user)
     else:
-        return render_template('error.jinja', error=("No user found with the name " + user), username=g.username, loggedIn=g.loggedin)
+        return render_template('error.jinja', error=("No user found with the name " + user))
 
 
 @app.route('/managelist', methods=['GET', ])
@@ -71,10 +71,19 @@ def manageSongList():
     Shows the song list manager / editor for the current logged in user.
     """
     if int(g.uid) > 0:
-        return render_template('managelist.jinja', uid=g.uid, username=g.username, loggedIn=g.loggedin)
+        return render_template('managelist.jinja')
     else:
-        return render_template('error.jinja', error=("No songlist found for user " + g.username), username=g.username, loggedIn=g.loggedin)
+        return render_template('error.jinja', error=("No songlist found for user " + g.username))
 
+@app.route('/requests', methods=['GET',])
+def manageRequests():
+    """
+    Shows the request list manager for the current logged in user.
+    """
+    if int(g.uid) > 0:
+        return render_template('managereqs.jinja')
+    else:
+        return render_template('error.jinja', error=("No songlist found for user " + g.username))
 
 @app.route('/profile/<user>', methods=['GET', ])
 def renderProfile(user):
@@ -89,9 +98,9 @@ def renderProfile(user):
     row = cursor.fetchone()
     if row is not None:
         uid = int(row['uid'])
-        return render_template('profile.jinja', uid=g.uid, listuid=uid, listuser=user, username=g.username, loggedIn=g.loggedin)
+        return render_template('profile.jinja', listuid=uid, listuser=user)
     else:
-        return render_template('error.jinja', error=("No user found with the name " + user), username=g.username, loggedIn=g.loggedin)
+        return render_template('error.jinja', error=("No user found with the name " + user))
 
 
 @app.route('/song/<sid>', methods=['GET', ])
@@ -101,7 +110,7 @@ def songInfo(sid):
     <sid> - Song ID for the relevant song.
     """
     sid = int(sid)
-    return render_template('song.jinja', uid=g.uid, username=g.username, loggedIn=g.loggedin, sid=sid)
+    return render_template('song.jinja', sid=sid)
 
 
 @app.route('/artist/<aid>', methods=['GET', ])
@@ -111,4 +120,4 @@ def artistInfo(aid):
     <aid> - Artist ID for the relevant song.
     """
     aid = int(aid)
-    return render_template('artist.jinja', uid=g.uid, username=g.username, loggedIn=g.loggedin, aid=aid)
+    return render_template('artist.jinja', aid=aid)

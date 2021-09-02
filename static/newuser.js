@@ -5,7 +5,7 @@ function validateForm() {
     let passconf = document.forms.newuser.passwordconf.value;
 
     if (pass != passconf) {
-        makeToast('Error', 'Passwords do not match.');
+        makeToast(ERROR, '⚠️ Error', 'Passwords do not match.');
         return false;
     }
 
@@ -13,7 +13,7 @@ function validateForm() {
     ureq.open('GET', APIURL + '/checkuser/' + newusername, false);
     ureq.send();
     if (ureq.responseText == '1') {
-        makeToast('Error', 'Username is already in use.');
+        makeToast(ERROR, '⚠️ Error', 'Username is already in use.');
         return false;
     }
 
@@ -21,7 +21,7 @@ function validateForm() {
     ereq.open('GET', APIURL + '/checkemail/' + email, false);
     ereq.send();
     if (ereq.responseText == '1') {
-        makeToast('Error', 'Email is already in use.');
+        makeToast(ERROR, '⚠️ Error', 'Email is already in use.');
         return false;
     }
 }

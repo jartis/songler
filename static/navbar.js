@@ -29,7 +29,7 @@ function populateSearch() {
             let entry = {
                 label: 'Artist: ' + rawlist[i].artist,
                 value: '/artist/' + rawlist[i].aid,
-            }
+            };
             optlist.push(entry);
         }
     };
@@ -58,3 +58,16 @@ let srch = new Autocomplete(document.getElementById('srch'), {
     },
     maximumItems: 10,
 });
+
+function updateReqBadge() {
+    const breq = new XMLHttpRequest();
+    breq.onload = function () {
+        if (isNaN(Number(responseText))){
+            document.getElementById('reqbadge').innerText = '?';
+        } else {
+            document.getElementById('reqbadge').innerText = responseText;
+        }
+    };
+    breq.open('GET', APIURL + '/reqcount');
+    breq.send();
+}

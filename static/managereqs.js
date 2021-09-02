@@ -52,7 +52,7 @@ function writeReqList() {
     tblHtml += '<button id="pp" type="button" onclick="prevPage();" class="btn btn-secondary">‹ Prev Page</button>';
     tblHtml += '</span>';
     tblHtml += '<span style="width: 20%; margin: auto; padding:2%;">';
-    tblHtml += '<span>' + curPage.toString() + ' / ' + lastPage.toString() + '</span>';
+    tblHtml += `<span>${curPage.toString()} / ${lastPage.toString()}</span>`;
     tblHtml += '</span>';
     tblHtml += '<span style="width: 20%; margin: auto; padding:2%;">';
     tblHtml += '<button id="np" type="button" onclick="nextPage();" class="btn btn-secondary">Next Page ›</button>';
@@ -109,6 +109,7 @@ function removeReq(e) {
     const req = new XMLHttpRequest();
     req.onload = function () { 
         makeToast(SUCCESS, '❌ Success', title + ' has been removed from your queue.');
+        updateReqBadge();
     };
     req.open('GET', APIURL + '/removereq/' + rid);
     req.send();
@@ -123,6 +124,7 @@ function playReq() {
         const rmreq = new XMLHttpRequest();
         rmreq.onload = function() {
             makeToast(SUCCESS, '✔️ Success', title + ' has been marked as played.');
+            updateReqBadge();
         };
         rmreq.open('GET', APIURL + '/removereq/' + rid);
         rmreq.send();

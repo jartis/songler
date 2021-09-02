@@ -139,7 +139,7 @@ function writeSongList() {
     tblHtml += '<button id="pp" type="button" onclick="prevPage();" class="btn btn-secondary">‹ Prev Page</button>';
     tblHtml += '</span>';
     tblHtml += '<span style="width: 20%; margin: auto; padding:2%;">';
-    tblHtml += '<span>' + curPage.toString() + ' / ' + lastPage.toString() + '</span>';
+    tblHtml += `<span>${curPage.toString()} / ${lastPage.toString()}</span>`;
     tblHtml += '</span>';
     tblHtml += '<span style="width: 20%; margin: auto; padding:2%;">';
     tblHtml += '<button id="np" type="button" onclick="nextPage();" class="btn btn-secondary">Next Page ›</button>';
@@ -190,7 +190,7 @@ function togglepub(e) {
     req.onload = function () {
         loadList();
     };
-    req.open('GET', APIURL + '/setsongpub/' + slid + '/' + (pub ? 1 : 0));
+    req.open('GET',  `${APIURL}/setsongpub/${slid}/${(pub ? 1 : 0)}`);
     req.send();
 }
 
@@ -201,7 +201,7 @@ function togglewheel(e) {
     req.onload = function () {
         loadList();
     };
-    req.open('GET', APIURL + '/setsongwheel/' + slid + '/' + (wheel ? 1 : 0));
+    req.open('GET', `${APIURL}/setsongwheel/${slid}/${(wheel ? 1 : 0)}`);
     req.send();
 }
 
@@ -216,10 +216,10 @@ function deleteSong(e) {
         dataType: "json",
         complete: function (msg) {
             if (msg.status == 200) {
-                makeToast(SUCCESS, '❌ Success', title + ' has been removed from your list.');
+                makeToast(SUCCESS, '❌ Success', `${title} has been removed from your list.`);
                 loadList();
             } else {
-                makeToast(ERROR, '⚠️ Error', title + ' could not be removed from your list.');
+                makeToast(ERROR, '⚠️ Error', `${title} could not be removed from your list.`);
             }
         }
     });
@@ -232,11 +232,11 @@ function queueSong(e) {
     const req = new XMLHttpRequest();
     req.onload = function () {
         if (this.responseText == 'OK') {
-            makeToast(SUCCESS, '✔️ Success', title + ' by ' + artist + ' added to your queue');
+            makeToast(SUCCESS, '✔️ Success', `${title} by ${artist} added to your queue`);
         } else if (this.responseText == 'QF') {
-            makeToast(SUCCESS, '✔️ Success', title + ' by ' + artist + ' added to your queue');
+            makeToast(SUCCESS, '✔️ Success', `${title} by ${artist} added to your queue`);
         } else if (this.responseText == 'NS') {
-            makeToast(SUCCESS, '✔️ Success', title + ' by ' + artist + ' added to your queue');
+            makeToast(SUCCESS, '✔️ Success', `${title} by ${artist} added to your queue`);
         }
     };
     req.open('GET', APIURL + '/addreq/' + slid);
@@ -263,7 +263,7 @@ function saveSong(e) {
             if (this.responseText == 'QF') {
                 makeToast(ERROR, '⚠️ Error', 'You already have a request in the queue for this user.');
             } else if (this.responseText == 'OK') {
-                makeToast(SUCCESS, '✔️ Success', 'Your request for ' + title + ' by ' + artist + ' has been placed!');
+                makeToast(SUCCESS, '✔️ Success', `Your request for ${title} by ${artist} has been placed!`);
             } else {
                 makeToast(ERROR, '⚠️ Error', 'Something weird happened...');
             }

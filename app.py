@@ -42,7 +42,7 @@ def before_request():
         g.username = session['username']
         g.loggedin = True
         g.uid = session['uid']
-        g.count = reqCount(g.uid)
+        g.count = getReqCount(g.uid)
 
 ####################
 # Helper functions #
@@ -80,7 +80,9 @@ def getVideoId(link):
     Takes a youtube link and returns the trimmed video ID.
     <link>: The youtube link to parse.
     """
-    query = urlparse.urlparse(link)
+    if (link == ''):
+        return ''
+    query = urlparse(link)
     if query.hostname == 'youtu.be':
         return query.path[1:]
     if query.hostname in ('www.youtube.com', 'youtube.com'):
@@ -93,7 +95,7 @@ def getVideoId(link):
             return query.path.split('/')[2]
     return ''
 
-def reqCount(uid):
+def getReqCount(uid):
     """
     Get count of requests for a user
     """
@@ -138,20 +140,20 @@ def findOrAddSong(artist, title):
         result = cursor.fetchall()
     tid = int(result[0]['tid'])
     # Actual Song ID
-    query = 'SELECT sid FROM songs WHERE artist = %s AND title = %s'
+    query = 'SELECT sid FROM songs WHERE aid = %s AND tid = %s'
     cursor.execute(query, (aid, tid,))
     result = cursor.fetchall()
     if (len(result) == 0):  # SONG doesn't exist
-        query = 'INSERT INTO songs (artist, title) VALUES (%s, %s, %s)'
+        query = 'INSERT INTO songs (aid, tid) VALUES (%s, %s)'
         cursor.execute(query, (aid, tid))
         db.connection.commit()
-        query = 'SELECT sid FROM songs WHERE artist = %s AND title = %s'
+        query = 'SELECT sid FROM songs WHERE aid = %s AND tid = %s'
         cursor.execute(query, (aid, tid,))
         result = cursor.fetchall()
     return result[0]['sid']
 
 import auth
-import render
+import routes
 import api
 
 if __name__ == '__main__':

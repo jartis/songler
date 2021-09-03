@@ -62,10 +62,10 @@ let srch = new Autocomplete(document.getElementById('srch'), {
 function updateReqBadge() {
     const breq = new XMLHttpRequest();
     breq.onload = function () {
-        if (isNaN(Number(responseText))){
+        if (isNaN(Number(this.responseText))){
             document.getElementById('reqbadge').innerText = '?';
         } else {
-            document.getElementById('reqbadge').innerText = responseText;
+            document.getElementById('reqbadge').innerText = this.responseText;
         }
     };
     breq.open('GET', APIURL + '/reqcount');

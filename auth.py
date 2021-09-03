@@ -1,6 +1,6 @@
 from app import app, db, addNewUser, getVideoId, findOrAddSong
 import api
-import render
+import routes
 import random
 from flask import Flask, url_for, redirect, request, jsonify, render_template, g, session, flash
 from flask_mysqldb import MySQL

@@ -20,18 +20,23 @@
                     <a class="btn btn-secondary" href="/managelist">Songlist Manager</a>
                 </li>
                 {% endif %}
-                {% if g.count > 0 %}
                 <li class="nav-item mx-1">
                     <a class="btn btn-secondary" href="/requests" tabindex="-1">Request Manager
+                        {% if g.count > 0 %}
                         <span id="reqbadge" class="badge rounded-pill bg-danger">
                             {{ g.count }}
                         </span>
+                        {% endif %}
                     </a>
                 </li>
-                {% endif %}
                 {% if g.loggedin %}
-                <li class="nav-item mx-1">
-                    <a class="btn btn-secondary" href="/wheel" tabindex="-1">Stream Overlay</a>
+                <li class="nav-item mx-1 dropdown">
+                    <a class="btn btn-secondary dropdown-toggle" id="dropdown03" data-bs-toggle="dropdown"
+                        aria-expanded="true">Stream Overlays</a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdown03" data-bs-popper="none">
+                        <li><a class="dropdown-item" href="/wheel">Wheel Overlay</a></li>
+                        <li><a class="dropdown-item" href="/reqs">Minimal Request List</a></li>
+                    </ul>
                 </li>
                 {% endif %}
             </ul>

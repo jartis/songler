@@ -121,3 +121,14 @@ def artistInfo(aid):
     """
     aid = int(aid)
     return render_template('artist.jinja', aid=aid)
+
+
+@app.route('/reqs/', methods=['GET',])
+def minReqs():
+    """
+    Minimal version of the requests page, suitable for overlays
+    """
+    if int(g.uid) > 0:
+        return render_template('minreqs.jinja')
+    else:
+        return render_template('error.jinja', error=("No songlist found for user " + g.username))

@@ -18,7 +18,7 @@ RUN pip install -r requirements.txt
 COPY app.py .
 COPY auth.py .
 COPY api.py .
-COPY render.py .
+COPY routes.py .
 COPY serve.py .
 COPY dbconf.py .
 COPY templates ./templates/

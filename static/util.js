@@ -30,3 +30,21 @@ function makeToast(cat, hed, msg) {
     let toastEl = bootstrap.Toast.getOrCreateInstance(document.getElementById(toastid));
     toastEl.show();
 }
+
+function titleCase(str) {
+    return str.toLowerCase().split(' ').map(function (word) {
+        return (word.charAt(0).toUpperCase() + word.slice(1));
+    }).join(' ');
+}
+
+function removeArticles(str) {
+    words = str.split(" ");
+    if (words.length <= 1) return str;
+    if (words[0] == 'A' || words[0] == 'The' || words[0] == 'An')
+        return words.splice(1).join(" ");
+    return str;
+}
+
+function TitleCompare(a, b) {
+    return removeArticles(titleCase(a)).localeCompare(removeArticles(titleCase(b)));
+}

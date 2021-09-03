@@ -23,7 +23,6 @@ Song picker / request tracker / etc for Twitch
 * Lock in "config mode" to ignore canvas clicks?
 * End-of-session reports (for import to practice trackers?)
 * Based on normalization, "fun reports" like most played artists?
-* Error handling for adding song that is already on user's songlist
 * Error handling for adding song if the server catches fire
 * Limits on requests for non logged in users
 * Toggle "Allow anonymous requests"
@@ -45,9 +44,16 @@ Song picker / request tracker / etc for Twitch
 * Change last played date and play count from song management page
 * Document the wheel features a little better...
 * Update breadcrumbs / navbar when on appropriate page
+* Clean up all string interpolation
+* `Enter` to save song in song adding modal
+* Auto clear fields on modal dismiss
 
 ## Done
 
+* ~~Ignore "The" on string sorting~~
+* ~~Auto-fix casing~~
+* ~~Turn off browser autocomplete in song adding modal~~
+* ~~Error handling for adding song that is already on user's songlist~~
 * ~~Request queue page that is NOT the wheel overlay (with the youtube link, etc)~~
 * ~~Center search box in navbar somehow? (It moves based on username length)~~ I just moved it.
 * ~~Add toggle for "wheel-able" songs, separate from public~~

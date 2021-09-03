@@ -1,6 +1,6 @@
-from app import app, db, addNewUser, getVideoId, findOrAddSong
+from app import app, db, addNewUser, getVideoId, findOrAddSong, getReqCount
 import auth
-import render
+import routes
 import random
 from flask import Flask, url_for, redirect, request, jsonify, render_template, g, session, flash
 from flask_mysqldb import MySQL
@@ -190,7 +190,7 @@ def reqCount():
     uid = g.uid
     if (uid == 0):
         return '0'
-    return str(app.reqCount(uid))
+    return str(getReqCount(uid))
 
 
 @app.route('/api/v1/getreqs', methods=['GET'])
@@ -232,6 +232,9 @@ def addRequest(slid):
     if (g.uid is not None):
         ruid = g.uid
         rname = g.username
+    prio = 0
+    if (request.args.get('p') is not None):
+        prio = 1
     slid = int(slid)
     cursor = db.connection.cursor()
     # First, a rate limit check - is there a request for target user in the Request MQ from us alread?
@@ -244,10 +247,10 @@ def addRequest(slid):
             if (result['uid'] != sessiond['uid']):
                 # Only bail out if the song owner isn't the one requesting. You can fill your own queue.
                 return "QF"
-    query = 'INSERT INTO requests (uid, ruid, slid, timestamp, rname) '
-    query += 'SELECT uid, %s, slid, NOW(), %s FROM songlists '
+    query = 'INSERT INTO requests (uid, ruid, slid, timestamp, rname, prio) '
+    query += 'SELECT uid, %s, slid, NOW(), %s, %s FROM songlists '
     query += 'WHERE slid = %s'
-    cursor.execute(query, (ruid, rname, slid, ))
+    cursor.execute(query, (ruid, rname, prio, slid))
     db.connection.commit()
     result = cursor.fetchall()
     return 'OK'
@@ -281,14 +284,20 @@ def addSong():
     public = int(request.json['pub'])
     uid = int(request.json['uid'])
     link = request.json['link']
-    sid = findOrAddSong(songartist, songtitle, link)
-    cursor = db.connection.cursor()
+    sid = findOrAddSong(songartist, songtitle)
     ytid = getVideoId(link)
+    cursor = db.connection.cursor()
+    # Check if it already exists!
+    query = 'SELECT COUNT(*) as count FROM songlists WHERE uid = %s AND sid = %s'
+    cursor.execute(query, (uid, sid,))    
+    result = cursor.fetchone()['count']
+    if int(result) > 0:
+        return 'SE'
     query = 'INSERT INTO songlists (uid, sid, public, ytid) VALUES (%s, %s, %s, %s)'
     cursor.execute(query, (uid, sid, public, ytid,))
     db.connection.commit()
     result = cursor.fetchall()
-    return jsonify(result)
+    return 'OK'
 
 
 @app.route('/api/v1/artistinfo/<aid>', methods=['GET'])

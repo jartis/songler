@@ -114,6 +114,7 @@ def tlinkok():
     session['uid'] = row['uid']
     session['loggedIn'] = True
     session['username'] = row['username']
+    session['displayname'] = row['displayname']
     session['tuid'] = twitchuid
     return redirect(url_for('renderHome'))
 

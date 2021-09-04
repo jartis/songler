@@ -19,7 +19,7 @@ function writeSongInfo() {
     if (songinfo.users.length > 0) {
         si += '<h3>Users that play ' + songinfo.title + ':</h3>';
         for (let i = 0; i < songinfo.users.length; i++) {
-            si += '<p><a href="/songlist/' + songinfo.users[i].username + '">' + songinfo.users[i].username + '</a></p>';
+            si += '<p><a href="/songlist/' + songinfo.users[i].displayname + '">' + songinfo.users[i].displayname + '</a></p>';
         }
     } else {
         si += '<p>No users with ' + songinfo.title + ' on their public song list.</p>';

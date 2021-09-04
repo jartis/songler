@@ -8,13 +8,13 @@ function populateSearch() {
         let rawlist = JSON.parse(this.responseText);
         for (let i = 0; i < rawlist.length; i++) {
             let entry = {
-                label: 'User Profile: ' + rawlist[i].username,
-                value: '/profile/' + rawlist[i].username,
+                label: 'User Profile: ' + rawlist[i].displayname,
+                value: '/profile/' + rawlist[i].displayname,
             };
             optlist.push(entry);
             entry = {
-                label: rawlist[i].username + '\'s Public Songlist',
-                value: '/songlist/' + rawlist[i].username,
+                label: rawlist[i].displayname + '\'s Public Songlist',
+                value: '/songlist/' + rawlist[i].displayname,
             };
             optlist.push(entry);
         }

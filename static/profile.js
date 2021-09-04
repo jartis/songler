@@ -17,7 +17,7 @@ function writeUserInfo() {
     pt += new Intl.DateTimeFormat('en').format(Date.parse(userinfo.signup));
     pt += '</p>';
     // Public songlist link:
-    pt += '<p><a href="/songlist/' + userinfo.username + '">Public song list for ' + userinfo.displayname + '</a></p>';
+    pt += '<p><a href="/songlist/' + userinfo.displayname + '">Public song list for ' + userinfo.displayname + '</a></p>';
     // Twitch link:
     if (userinfo.twitch != '0') {
         pt += '<p><a href="https://twitch.tv/' + userinfo.twitchname + '">' + userinfo.twitchname + ' on Twitch</a></p>';

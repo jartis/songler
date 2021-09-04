@@ -35,6 +35,7 @@ db = MySQL(app)
 @app.before_request
 def before_request():
     g.username = None
+    g.displayname = None
     g.uid = 0
     g.loggedin = False
     g.count = 0

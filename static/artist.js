@@ -25,7 +25,7 @@ function writeArtistInfo() {
         if (artistInfo.users.length > 0) {
             si += `<h3>Users who play songs by ${artistInfo.artist}:</h3>`;
             for (let i = 0; i < artistInfo.users.length; i++) {
-                si += '<p><a href="/profile/' + artistInfo.users[i].username + '">' + artistInfo.users[i].username + '</a></p>';
+                si += '<p><a href="/profile/' + artistInfo.users[i].displayname + '">' + artistInfo.users[i].displayname + '</a></p>';
                 // TODO: Add link to songlist?
             }
         } else {

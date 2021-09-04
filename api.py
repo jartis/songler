@@ -318,7 +318,7 @@ def getArtistInfo(aid):
     cursor.execute(query, (int(aid),))
     result['songs'] = cursor.fetchall()
     # TODO: Get streamers that play this artist
-    query = 'SELECT DISTINCT username FROM users '
+    query = 'SELECT DISTINCT displayname FROM users '
     query += 'INNER JOIN songlists ON songlists.uid = users.uid '
     query += 'INNER JOIN songs ON songlists.sid = songs.sid '
     query += 'WHERE songs.aid = %s AND songlists.public = TRUE'
@@ -361,7 +361,7 @@ def getUsers():
     """
     Get a raw list of usernames and uids for populating autocomplete box.
     """
-    query = 'SELECT username, uid FROM users'
+    query = 'SELECT displayname AS username, uid FROM users'
     cursor = db.connection.cursor()
     cursor.execute(query)
     result = cursor.fetchall()

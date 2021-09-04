@@ -51,11 +51,11 @@ def renderHome():
 def showSongList(user):
     """
     Shows the public songlist for a given user.
-    <user> - The username for the songlist we want to display.
+    <user> - The *Display Name* for the songlist we want to display.
     """
     user = str(user)
     cursor = db.connection.cursor()
-    query = 'SELECT * FROM users WHERE username LIKE %s'
+    query = 'SELECT * FROM users WHERE displayname LIKE %s'
     cursor.execute(query, [user, ])
     row = cursor.fetchone()
     if row is not None:
@@ -89,11 +89,11 @@ def manageRequests():
 def renderProfile(user):
     """
     Gets the profile page for the specified user.
-    <user> - Username for the profile page to retrieve.
+    <user> - *Display Name* for the profile page to retrieve.
     """
     user = str(user)
     cursor = db.connection.cursor()
-    query = 'SELECT uid FROM users WHERE username LIKE %s'
+    query = 'SELECT uid FROM users WHERE displayname LIKE %s'
     cursor.execute(query, [user, ])
     row = cursor.fetchone()
     if row is not None:

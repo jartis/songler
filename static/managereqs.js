@@ -34,7 +34,10 @@ function writeReqList() {
         let lastPage = Math.ceil(reqlist.length / 10);
         for (let i = listOffset; i < maxLength; i++) {
             let req = reqlist[i];
-            tblHtml += `<tr class="${req.prio ? 'table-warning' : ''}">`;
+            let prioname = '';
+            if (req.prio == -1) { prioname = 'table-secondary'; }
+            if (req.prio == 1) { prioname = 'table-warning'; }
+            tblHtml += `<tr class="${prioname}">`;
             tblHtml += `<td>${req.rname}</td>`;
             tblHtml += `<td>${req.artist}</td>`;
             tblHtml += `<td>${req.title}</td>`;

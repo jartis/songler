@@ -55,12 +55,12 @@ def showSongList(user):
     """
     user = str(user)
     cursor = db.connection.cursor()
-    query = 'SELECT uid FROM users WHERE username LIKE %s'
+    query = 'SELECT * FROM users WHERE username LIKE %s'
     cursor.execute(query, [user, ])
     row = cursor.fetchone()
     if row is not None:
         uid = int(row['uid'])
-        return render_template('requestlist.jinja', listuid=uid, listuser=user)
+        return render_template('requestlist.jinja', listuid=uid, listuser=row['displayname'])
     else:
         return render_template('error.jinja', error=("No user found with the name " + user))
 
@@ -83,7 +83,7 @@ def manageRequests():
     if int(g.uid) > 0:
         return render_template('managereqs.jinja')
     else:
-        return render_template('error.jinja', error=("No songlist found for user " + g.username))
+        return render_template('error.jinja', error=("No request list found for user " + g.username))
 
 @app.route('/profile/<user>', methods=['GET', ])
 def renderProfile(user):
@@ -131,4 +131,4 @@ def minReqs():
     if int(g.uid) > 0:
         return render_template('minreqs.jinja')
     else:
-        return render_template('error.jinja', error=("No songlist found for user " + g.username))
+        return render_template('error.jinja', error=("No request list found for user " + g.username))

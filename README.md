@@ -34,7 +34,6 @@ Song picker / request tracker / etc for Twitch
 * Put a toaster on the wheel page!!!
 * Set control values on config load
 * Interstitial "Initialize" page for making a stream overlay?
-* Fix displayname on songlist page (Use DB Canonicalization)
 * Password changing / recovery
 * Track separate usernames per system? (DisplayName independent?)
 * Add most recent 'Last Played' to song info page
@@ -50,6 +49,7 @@ Song picker / request tracker / etc for Twitch
 
 ## Done
 
+* ~~Fix displayname on songlist page (Use DB Canonicalization)~~
 * ~~Ignore "The" on string sorting~~
 * ~~Auto-fix casing~~
 * ~~Turn off browser autocomplete in song adding modal~~

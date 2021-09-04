@@ -30,7 +30,10 @@ function writeReqList() {
     tblHtml += '</tr></thead><tbody>';
     for (let i = listOffset; i < reqlist.length; i++) {
         let req = reqlist[i];
-        tblHtml += `<tr class="${req.prio ? 'text-warning' : ''}">`;
+        let prioText = '';
+        if (req.prio == -1) { prioText = 'text-secondary'; }
+        if (req.prio == 1) { prioText = 'text-warning'; }
+        tblHtml += `<tr class="${prioText}">`;
         tblHtml += `<td>${req.rname}</td>`;
         tblHtml += `<td>${req.artist}</td>`;
         tblHtml += `<td>${req.title}</td>`;

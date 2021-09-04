@@ -6,6 +6,7 @@ const GREEN = '#008800';
 const YELLOW = '#FFFF00';
 const RED = '#FF0000';
 const BLUE = '#0000FF';
+const BROWN = '#AA5500';
 const TRANSPARENT = '#00000000';
 
 // DEBUG
@@ -26,8 +27,7 @@ var songlist = [
 ];
 
 // Queue and associated display objs
-var povertyQueue = [];
-var priorityQueue = [];
+var songQueue = [];
 
 // Set up a drawing target for the wheel
 var wheelCanvas;
@@ -228,12 +228,11 @@ function drawQueue() {
     queueCtx.beginPath();
     queueCtx.rect(20, 0, 550, 800);
     queueCtx.clip();
-    for (let i = 0; i < priorityQueue.length; i++) {
-        drawShadowedText(queueCtx, 20, lineY, getFullName(priorityQueue[i]), YELLOW);
-        lineY += 20;
-    }
-    for (let i = 0; i < povertyQueue.length; i++) {
-        drawShadowedText(queueCtx, 20, lineY, getFullName(povertyQueue[i]), WHITE);
+    for (let i = 0; i < songQueue.length; i++) {
+        let qCol = WHITE;
+        if (songQueue[i].prio > 0) { qCol = YELLOW; }
+        if (songQueue[i].prio < 0) { qCol = BROWN; }
+        drawShadowedText(queueCtx, 20, lineY, getFullName(songQueue[i]), qCol);
         lineY += 20;
     }
     queueCtx.restore();
@@ -242,12 +241,11 @@ function drawQueue() {
     queueCtx.beginPath();
     queueCtx.rect(600, 0, 200, 800);
     queueCtx.clip();
-    for (let i = 0; i < priorityQueue.length; i++) {
-        drawShadowedText(queueCtx, 600, lineY, priorityQueue[i].username, YELLOW);
-        lineY += 20;
-    }
-    for (let i = 0; i < povertyQueue.length; i++) {
-        drawShadowedText(queueCtx, 600, lineY, povertyQueue[i].username, WHITE);
+    for (let i = 0; i < songQueue.length; i++) {
+        let qCol = WHITE;
+        if (songQueue[i].prio > 0) { qCol = YELLOW; }
+        if (songQueue[i].prio < 0) { qCol = BROWN; }
+        drawShadowedText(queueCtx, 600, lineY, songQueue[i].username, qCol);
         lineY += 20;
     }
     queueCtx.restore();
@@ -257,18 +255,6 @@ function drawQueue() {
     }
 
     srcctx.drawImage(queueCanvas, config.queueLeft, config.queueTop, config.queueSize, config.queueSize);
-}
-
-function drawAddSongToQueueButton() {
-    // Draw an "Add Song" button
-    srcctx.fillStyle = BLUE;
-    srcctx.fillRect(1620, 980, 100, 100);
-    srcctx.font = '16px Arial';
-    srcctx.textAlign = 'center';
-    srcctx.textBaseline = 'middle';
-    srcctx.fillStyle = WHITE;
-    drawBoldText(srcctx, 1670, 1020, 'CHECK', WHITE);
-    drawBoldText(srcctx, 1670, 1040, 'REQUESTS', WHITE);
 }
 
 function drawClickToSpin() {
@@ -322,24 +308,18 @@ function getFullName(song) {
     return song.artist + ' - ' + song.title;
 }
 
-function tryAddSongToQueue(songToAdd, priority = false) {
-    if (priority) {
-        if (priorityQueue.length < config.maxPriorityQueueSize &&
-            (priorityQueue.length + povertyQueue.length < config.maxTotalQueueSize)) {
-            priorityQueue.push(songToAdd);
-            return true;
-        } else {
-            return false;
-        }
-    } else {
-        if (povertyQueue.length < config.maxPovertyQueueSize &&
-            (priorityQueue.length + povertyQueue.length < config.maxTotalQueueSize)) {
-            povertyQueue.push(songToAdd);
-            return true;
-        } else {
-            return false;
-        }
+function sortSongQueue() {
+    songQueue.sort((a, b) => (a.timestamp < b.timestamp));
+    songQueue.sort((a, b) => (a.prio > b.prio));
+}
+
+function tryAddSongToQueue(songToAdd, priority = 0) {
+    if (songQueue.length >= maxTotalQueueSize) {
+        return false;
     }
+    songQueue.push(songToAdd);
+    sortSongQueue();
+    return true;
 }
 
 function distance(x1, y1, x2, y2) {
@@ -383,8 +363,7 @@ function mouseMoved(e) {
         if (mx > config.queueLeft && mx < config.queueLeft + config.queueSize &&
             my > config.queueTop + entrySize && my < config.queueTop + config.queueSize) {
             let queueIndex = Math.floor((my - (config.queueTop + entrySize)) / (entrySize));
-            let totalQueueSize = (priorityQueue.length) + (povertyQueue.length);
-            if (queueIndex >= totalQueueSize) {
+            if (queueIndex >= songQueue.length) {
                 return;
             }
             songQueuePosIndex = queueIndex;
@@ -435,41 +414,22 @@ function canvasClicked(e) {
             // Remove a song from the queue
             let entrySize = config.queueSize / 40;
             let queueIndex = Math.floor((my - (config.queueTop + entrySize)) / (entrySize));
-            let totalQueueSize = (priorityQueue.length) + (povertyQueue.length);
-            if (queueIndex >= totalQueueSize) {
+            if (queueIndex >= songQueue.length) {
                 return;
             }
-            if (queueIndex < priorityQueue.length) {
-                if (mx > (config.queueLeft + entrySize)) {
-                    if (playSong(priorityQueue[queueIndex])) {
-                        console.log('Played priority song index ' + queueIndex);
-                        priorityQueue.splice(queueIndex, 1);
-                    } else {
-                        console.log("Error removing song from queue!");
-                    }
-                    mouseMoved(e); return;
-                } else {
-                    console.log('Deleted priority song index ' + queueIndex);
-                    rpt_skippedSongs.push(priorityQueue[queueIndex].slid);
-                    priorityQueue.splice(queueIndex, 1);
-                    removeRequest(priorityQueue[queueIndex].rid);
-                    mouseMoved(e); return;
-                }
-            }
-            queueIndex -= priorityQueue.length;
             if (mx > (config.queueLeft + entrySize)) {
-                if (playSong(povertyQueue[queueIndex])) {
-                    console.log('Played standard song index ' + queueIndex);
-                    povertyQueue.splice(queueIndex, 1);
+                if (playSong(songQueue[queueIndex])) {
+                    console.log('Played song index ' + queueIndex);
+                    songQueue.splice(queueIndex, 1);
                 } else {
                     console.log("Error removing song from queue!");
                 }
                 mouseMoved(e); return;
             } else {
-                console.log('Deleted standard song index ' + queueIndex);
-                rpt_skippedSongs.push(povertyQueue[queueIndex].slid);
-                povertyQueue.splice(queueIndex, 1);
-                removeRequest(povertyQueue[queueIndex].rid);
+                console.log('Deleted song index ' + queueIndex);
+                rpt_skippedSongs.push(songQueue[queueIndex].slid);
+                songQueue.splice(queueIndex, 1);
+                removeRequest(songQueue[queueIndex].rid);
                 mouseMoved(e); return;
             }
         }
@@ -515,11 +475,9 @@ function getRequests() {
             if (song.rname == null) {
                 song.rname = 'Anonymous';
             }
-            // Add the song to the queue
-            if (tryAddSongToQueue(song, song.prio)) {
-                // Don't remove the req yet!
-            }
+            tryAddSongToQueue(song);
         }
+        sortSongQueue();
     };
     req.open('GET', APIURL + '/getreqs');
     req.send();
@@ -616,6 +574,9 @@ function refillWheel(e) {
     const req = new XMLHttpRequest();
     req.onload = function () {
         let list = JSON.parse(this.responseText);
+        for(let i = 0; i < list.length; i++) {
+            list[i].prio = -1;
+        }
         songlist.push.apply(songlist, list);
         initWheelCanvas();
     };
@@ -709,6 +670,9 @@ function loadSongs() {
         let biglist = JSON.parse(this.responseText);
         biglist = biglist.splice(0, maxWheel * 2);
         shuffle(biglist);
+        for (let i = 0; i < biglist.length; i++) {
+            biglist[i].prio = -1;
+        }
         songlist = biglist.splice(0, maxWheel);
         shuffle(songlist);
         initWheelCanvas();

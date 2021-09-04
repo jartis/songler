@@ -30,11 +30,11 @@ function doSort() {
     switch (sort) {
         case -ARTIST:
             songlist.sort((a, b) => (TitleCompare(a.title, b.title)));
-            songlist.sort((b, a) => (TitleCompare(a.artist, b.artist))); 
+            songlist.sort((b, a) => (TitleCompare(a.artist, b.artist)));
             break;
         case ARTIST:
             songlist.sort((a, b) => (TitleCompare(a.title, b.title)));
-            songlist.sort((a, b) => (TitleCompare(a.artist, b.artist))); 
+            songlist.sort((a, b) => (TitleCompare(a.artist, b.artist)));
             break;
         case -TITLE:
             songlist.sort((b, a) => (TitleCompare(a.title, b.title)));
@@ -153,8 +153,9 @@ function writeSongList() {
         if (song.wheel) { tblHtml += 'checked '; }
         tblHtml += 'onclick="togglewheel(this)"/></div></td>';
         tblHtml += '<td class="text-end"><button style="margin: 2%;" class="btn btn-sm btn-danger" data-artist="' + song.artist + '" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="deleteSong(this)">✖ Remove</button>';
-        tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-primary" data-artist="' + song.artist + '" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="queueSong(this)">📝 Queue</button>';
-        tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-warning" data-artist="' + song.artist + '" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="queueSong(this, true)">👑 Priority</button>';
+        tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-secondary" data-artist="' + song.artist + '" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="queueSong(this, -1)">🚽 Q Low</button>';
+        tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-primary" data-artist="' + song.artist + '" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="queueSong(this, 0)">📝 Q Regular</button>';
+        tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-warning" data-artist="' + song.artist + '" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="queueSong(this, 1)">👑 Q Priority</button>';
         tblHtml += '</td></tr>';
     }
     tblHtml += '<td colspan=7 class="text-center">';
@@ -250,14 +251,14 @@ function deleteSong(e) {
     });
 }
 
-function queueSong(e, prio = false) {
+function queueSong(e, prio = 0) {
     let slid = e.getAttribute('data-id');
     let artist = e.getAttribute('data-artist');
     let title = e.getAttribute('data-title');
     const req = new XMLHttpRequest();
     req.onload = function () {
         if (this.responseText == 'OK') {
-            makeToast(SUCCESS, '✔️ Success', `${title} by ${artist} added to your ${prio ? 'priority ' : ''}queue`);
+            makeToast(SUCCESS, '✔️ Success', `${title} by ${artist} added to your ${prio != 0 ? ((prio < 0) ? 'low-prio ' : 'priority ') : ''}queue`);
             updateReqBadge();
         } else if (this.responseText == 'QF') {
             // FIXME
@@ -267,17 +268,19 @@ function queueSong(e, prio = false) {
             // makeToast(SUCCESS, '✔️ Success', `${title} by ${artist} added to your queue`);
         }
     };
-    req.open('GET', APIURL + '/addreq/' + slid + (prio ? '?p' : ''));
+    req.open('GET', APIURL + '/addreq/' + slid + (prio ? `?p=${prio}` : ''));
     req.send();
 }
 
 function saveSong(e) {
     let published = document.getElementById('addsongpublic').checked;
+    let wheel = document.getElementById('addsongwheel').checked;
     let newSong = {
         title: $('#addsongtitle').val(),
         artist: $('#addsongartist').val(),
         link: $('#addsonglink').val(),
         pub: published ? 1 : 0,
+        wheel: wheel ? 1 : 0,
         uid: uid,
     };
 
@@ -290,6 +293,11 @@ function saveSong(e) {
         complete: function (msg) {
             if (msg.responseText == 'SE') {
                 makeToast(ERROR, '⚠️ Error', 'This song is already on your song list.');
+                $('#addsongtitle').val('');
+                $('#addsongartist').val('');
+                $('#addsonglink').val('');
+                $('#addsongpublic').prop('checked', false);
+                $('#addsongwheel').prop('checked', true);
                 $('#addSongModal').modal('hide');
             } else if (msg.responseText == 'OK') {
                 makeToast(SUCCESS, '✔️ Success', `${newSong.title} by ${newSong.artist} has been added to your song list!`);

@@ -44,12 +44,14 @@ def addUser():
     'password' - user's chosen password. (Not stored plaintext!)
     """
     username = request.form['username']
+    displayname = request.form['username']
     password = request.form['password']
     email = request.form['email']
-    uid = addNewUser(username, bcrypt.generate_password_hash(password), email)
+    uid = addNewUser(username, bcrypt.generate_password_hash(password), email, displayname)
     session['username'] = username
     session['loggedIn'] = True
     session['uid'] = uid
+    session['displayname'] = username
     return redirect(url_for('renderHome'))
 
 
@@ -64,17 +66,18 @@ def authenticate():
     username = request.form['username']
     password = request.form['password']
     cursor = db.connection.cursor()
-    query = 'SELECT username, password, uid FROM users WHERE username = %s OR email = %s'
+    query = 'SELECT username, password, uid, displayname FROM users WHERE username = %s OR email = %s'
     cursor.execute(query, [username, username, ])
     user = cursor.fetchone()
     if user['password'] == '':
         flash('Your account was created by logging in with Twitch. Try logging in there and changing your password in your profile settings, if you wish to log in with a username and password here.')
-        return render_template('login.jinja', username=g.username, loggedIn=g.loggedin)
+        return render_template('login.jinja')
     temp = user['password']
     if len(user) > 0:
         session.pop('username', None)
         if (bcrypt.check_password_hash(temp, password)) == True:
-            session['username'] = request.form['username']
+            session['username'] = user['username']
+            session['displayname'] = user['displayname']
             session['loggedIn'] = True
             session['uid'] = user['uid']
             return redirect(url_for('renderHome'))
@@ -105,12 +108,12 @@ def tlinkok():
     twitchuid = twitchuser[0]['id']
     # Set the current user's tuid
     cursor = db.connection.cursor()
-    query = 'UPDATE users SET tuid = %s WHERE uid = %s'
+    query = 'UPDATE users SET tuid = %s, twitchname WHERE uid = %s'
     cursor.execute(query, [twitchuid, session['uid']])
     row = cursor.fetchone()
-    session['uid'] = uid
+    session['uid'] = row['uid']
     session['loggedIn'] = True
-    session['username'] = username
+    session['username'] = row['username']
     session['tuid'] = twitchuid
     return redirect(url_for('renderHome'))
 
@@ -139,17 +142,19 @@ def authorized():
     email = twitchuser[0]['email']
     # Okay, if this user doesn't exist in our database yet, let's add them!
     cursor = db.connection.cursor()
-    query = 'SELECT uid FROM users WHERE twitch = %s'
+    query = 'SELECT * FROM users WHERE tuid = %s'
     cursor.execute(query, [twitchuid, ])
     row = cursor.fetchone()
     if row is None:
         uid = addNewUser(username, '', email, -1, twitchuid)
-    else:
-        uid = row['uid']
+        query = 'SELECT * FROM users WHERE uid = %s'
+        cursor.execute(query, (uid,))
+        row = cursor.fetchone()
     # Set the session whatsits and let's rock!
-    session['uid'] = uid
+    session['uid'] = row['uid']
     session['loggedIn'] = True
-    session['username'] = username
+    session['username'] = row['username']
+    session['displayname'] = row['displayname']
     return redirect(url_for('renderHome'))
 
 
@@ -163,4 +168,5 @@ def logout():
     g.username = None
     g.uid = None
     g.loggedin = False
+    g.displayname = None
     return render_template('home.jinja')

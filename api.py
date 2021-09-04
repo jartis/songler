@@ -6,7 +6,6 @@ from flask import Flask, url_for, redirect, request, jsonify, render_template, g
 from flask_mysqldb import MySQL
 from flask_bcrypt import Bcrypt
 from flask_oauthlib.client import OAuth
-from twitch import *
 from enum import IntEnum
 from urllib.parse import urlparse
 
@@ -57,7 +56,7 @@ def checkuser(user):
     Searches for <user> as a username in the user table.
     Returns 1 or 0.
     """
-    user = str(user).replace('%', '\%').replace('_', '\_')
+    user = str(user).replace('%', r'\%').replace('_', r'\_')
     cursor = db.connection.cursor()
     query = 'SELECT uid FROM users WHERE username LIKE %s'
     cursor.execute(query, (user, ))
@@ -73,7 +72,7 @@ def checkemail(email):
     Searches for <email> in the user table.
     Returns 1 or 0.
     """
-    email = str(email).replace('%', '\%').replace('_', '\_')
+    email = str(email).replace('%', r'\%').replace('_', r'\_')
     cursor = db.connection.cursor()
     query = 'SELECT uid FROM users WHERE email LIKE %s'
     cursor.execute(query, [email, ])
@@ -176,7 +175,7 @@ def getUserInfo(uid):
     <uid> - The user to get the info about.
     """
     cursor = db.connection.cursor()
-    query = 'SELECT username, twitch, signup FROM users WHERE uid = %s'
+    query = 'SELECT * FROM users WHERE uid = %s'
     cursor.execute(query, (int(uid),))
     result = cursor.fetchone()
     return jsonify(result)
@@ -231,10 +230,10 @@ def addRequest(slid):
     rname = 'Anonymous'
     if (g.uid is not None):
         ruid = g.uid
-        rname = g.username
+        rname = g.displayname
     prio = 0
     if (request.args.get('p') is not None):
-        prio = 1
+        prio = int(request.args.get('p'))
     slid = int(slid)
     cursor = db.connection.cursor()
     # First, a rate limit check - is there a request for target user in the Request MQ from us alread?
@@ -244,7 +243,7 @@ def addRequest(slid):
         cursor.execute(query, (ruid, slid,))
         result = cursor.fetchall()
         if (len(result) > 0):
-            if (result['uid'] != sessiond['uid']):
+            if (result['uid'] != session['uid']):
                 # Only bail out if the song owner isn't the one requesting. You can fill your own queue.
                 return "QF"
     query = 'INSERT INTO requests (uid, ruid, slid, timestamp, rname, prio) '
@@ -282,6 +281,7 @@ def addSong():
     songtitle = request.json['title']
     songartist = request.json['artist']
     public = int(request.json['pub'])
+    wheel = int(request.json['wheel'])
     uid = int(request.json['uid'])
     link = request.json['link']
     sid = findOrAddSong(songartist, songtitle)
@@ -289,12 +289,12 @@ def addSong():
     cursor = db.connection.cursor()
     # Check if it already exists!
     query = 'SELECT COUNT(*) as count FROM songlists WHERE uid = %s AND sid = %s'
-    cursor.execute(query, (uid, sid,))    
+    cursor.execute(query, (uid, sid,))
     result = cursor.fetchone()['count']
     if int(result) > 0:
         return 'SE'
-    query = 'INSERT INTO songlists (uid, sid, public, ytid) VALUES (%s, %s, %s, %s)'
-    cursor.execute(query, (uid, sid, public, ytid,))
+    query = 'INSERT INTO songlists (uid, sid, public, ytid, wheel) VALUES (%s, %s, %s, %s, %s)'
+    cursor.execute(query, (uid, sid, public, ytid, wheel))
     db.connection.commit()
     result = cursor.fetchall()
     return 'OK'

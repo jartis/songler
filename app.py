@@ -40,6 +40,7 @@ def before_request():
     g.count = 0
     if 'username' in session:
         g.username = session['username']
+        g.displayname = session['displayname']
         g.loggedin = True
         g.uid = session['uid']
         g.count = getReqCount(g.uid)
@@ -49,7 +50,7 @@ def before_request():
 ####################
 
 
-def addNewUser(username, password, email, uid=-1, tuid=''):
+def addNewUser(username, password, email, displayname, uid=-1, tuid=''):
     """
     Adds a new user entry to the database.
     <username>: Desired username for new account.
@@ -61,14 +62,12 @@ def addNewUser(username, password, email, uid=-1, tuid=''):
     cursor = db.connection.cursor()
     if tuid == '':
         # Create a Username/Password user
-        query = 'INSERT INTO users (username, password, email, signup) VALUES (%s, %s, %s, CURRENT_TIMESTAMP)'
-        cursor.execute(query, (username, password, email,))
-        result = cursor.fetchall()
+        query = 'INSERT INTO users (username, password, email, signup, displayname) VALUES (%s, %s, %s, CURRENT_TIMESTAMP, %s)'
+        cursor.execute(query, (username, password, email, displayname))
     else:
         # Create a Twitch-based user
-        query = 'INSERT INTO users (username, password, email, twitch, signup) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)'
-        cursor.execute(query, (username, password, email, tuid,))
-        result = cursor.fetchall()
+        query = 'INSERT INTO users (username, password, email, tuid, signup, displayname) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, %s)'
+        cursor.execute(query, (username, password, email, tuid, username))
     query = 'SELECT uid FROM users WHERE username LIKE %s'
     cursor.execute(query, (username,))
     row = cursor.fetchone()

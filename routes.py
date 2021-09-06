@@ -103,6 +103,17 @@ def renderProfile(user):
         return render_template('error.jinja', error=("No user found with the name " + user))
 
 
+@app.route('/editprofile', methods=['GET', ])
+def editProfile():
+    """
+    Edits the profile of the currently logged in user.
+    Errors out if no session stuff is set.
+    """
+    if (g.uid == 0):
+        return render_template('error.jinja', error=("You must be logged in to edit your profile."))
+    return render_template('editprofile.jinja')
+
+
 @app.route('/song/<sid>', methods=['GET', ])
 def songInfo(sid):
     """

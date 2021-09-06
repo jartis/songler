@@ -133,7 +133,7 @@ def refillUserSongs():
     return jsonify(result[0:count])
 
 
-@app.route('/api/v1/play/<sid>', methods=['GET'])
+@app.route('/api/v1/play/<slid>', methods=['GET'])
 def playSong(slid):
     """
     Increments the play count and sets the last played date to now, for a given songlist id.
@@ -327,6 +327,91 @@ def getArtistInfo(aid):
     return jsonify(result)
 
 
+@app.route('/api/v1/setshowreq', methods=['POST'])
+def setShowReq():
+    """
+    Sets the "Show/Hide requester names" flag on the current logged in user's account.
+    POST: show = 0/1 for the flag (1 to show, 0 to hide)
+    """
+    if (session['uid'] == 0):
+        return 'NG'
+    show = int(request.json['show'])
+    query = 'UPDATE users SET showreqnames = %s WHERE uid = %s'
+    cursor = db.connection.cursor()
+    cursor.execute(query, (show, session['uid'],))
+    if (show > 0):
+        return 'Y'
+    return 'N'
+
+
+@app.route('/api/v1/setanon', methods=['POST'])
+def setAnon():
+    """
+    Sets the "Allow anonymous requests" flag on the current logged in user's account.
+    POST: show = 0/1 for the flag (1 to show, 0 to hide)
+    """
+    if (session['uid'] == 0):
+        return 'NG'
+    show = int(request.json['show'])
+    query = 'UPDATE users SET anon = %s WHERE uid = %s'
+    cursor = db.connection.cursor()
+    cursor.execute(query, (show, session['uid'],))
+    if (show > 0):
+        return 'Y'
+    return 'N'
+
+
+@app.route('/api/v1/getshowreq', methods=['GET'])
+def getShowReq():
+    """
+    Gets the show/hide requester names flag for the current logged in user.
+    Defaults to a zero if not logged in or anything like that.
+    """
+    if (session['uid'] == 0):
+        return '0'
+    query = 'SELECT showreqnames FROM users WHERE uid = %s'
+    cursor = db.connection.cursor()
+    cursor.execute(query, (session['uid'],))
+    result = cursor.fetchone()
+    return str(result['showreqnames'])
+
+
+@app.route('/api/v1/getanon/<uid>', methods=['GET'])
+def getAnon(uid):
+    """
+    Gets the allow anonymous requests flag for the current logged in user.
+    Defaults to a zero if not logged in or anything like that.
+    """
+    uid = int(uid)
+    if (uid == 0):
+        return '0'
+    query = 'SELECT anon FROM users WHERE uid = %s'
+    cursor = db.connection.cursor()
+    cursor.execute(query, (uid,))
+    result = cursor.fetchone()
+    return str(result['anon'])
+
+
+@app.route('/api/v1/setname', methods=['POST'])
+def setName():
+    """
+    Sets the display name for the currently logged in user.
+    """
+    if (session['uid'] == 0):
+        return 'NO'
+    dname = request.json['dname']
+    query = 'SELECT * FROM users WHERE displayname = %s'
+    cursor = db.connection.cursor()
+    cursor.execute(query, (session['uid'], ))
+    results = cursor.fetchall()
+    if len(results) > 0:
+        return 'NG'
+    query = 'UPDATE users SET displayname = %s where uid = %s'
+    cursor.execute(query, (dname, session['uid']))
+    session['displayname'] = dname
+    return 'OK'  # TODO: What if it ISN'T okay?
+
+
 @app.route('/api/v1/songinfo/<sid>', methods=['GET'])
 def getSongInfo(sid):
     """
@@ -342,7 +427,7 @@ def getSongInfo(sid):
     result = cursor.fetchone()
     # TODO: Handle a 'None' case gracefully
     # NEXT, we should get a list of users that have this song on their list?
-    query = 'SELECT DISTINCT username FROM users '
+    query = 'SELECT DISTINCT username, displayname FROM users '
     query += 'INNER JOIN songlists ON songlists.uid = users.uid '
     query += 'WHERE songlists.sid = %s AND songlists.public = 1'
     cursor.execute(query, (int(sid),))
@@ -361,7 +446,7 @@ def getUsers():
     """
     Get a raw list of usernames and uids for populating autocomplete box.
     """
-    query = 'SELECT displayname AS username, uid FROM users'
+    query = 'SELECT * FROM users'
     cursor = db.connection.cursor()
     cursor.execute(query)
     result = cursor.fetchall()

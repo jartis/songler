@@ -54,6 +54,22 @@ def addUser():
     session['displayname'] = username
     return redirect(url_for('renderHome'))
 
+    
+@app.route('/api/v1/savepass', methods=['POST',])
+def savePass():
+    """
+    Saves a new password for the currently logged in user
+    """
+    if (session['uid'] == 0):
+        return 'NO' # You can't do this! I forbid it!
+    if (request.json['password'] == ''):
+        return 'MT' # You can't do this! I forbid it!
+    cursor = db.connection.cursor()
+    pw = bcrypt.generate_password_hash(request.json['password'])
+    query = 'UPDATE users SET password = %s WHERE uid = %s'
+    cursor.execute(query, (pw, session['uid'],))
+    return 'OK' # Password set successfully
+
 
 @app.route('/authenticate', methods=['POST', ])
 def authenticate():
@@ -69,7 +85,7 @@ def authenticate():
     query = 'SELECT username, password, uid, displayname FROM users WHERE username = %s OR email = %s'
     cursor.execute(query, [username, username, ])
     user = cursor.fetchone()
-    if user['password'] == '':
+    if user['password'] == None or user['password'] == '':
         flash('Your account was created by logging in with Twitch. Try logging in there and changing your password in your profile settings, if you wish to log in with a username and password here.')
         return render_template('login.jinja')
     temp = user['password']
@@ -92,6 +108,25 @@ def twitchlink():
     """
     return twitchoauth.authorize(callback=url_for('tlinkok', _external=True, _scheme=app.config['SCHEME'],))
 
+@app.route('/tunlink')
+def twitchunlink():
+    """
+    Endpoint for unlinking your Twitch account from existing account
+    # NOTE: You need to enforce setting a password here!
+    """
+    cursor = db.connection.cursor()
+    query = 'SELECT password FROM users WHERE uid = %s'
+    cursor.execute(query, (session['uid'],))
+    pw = cursor.fetchone()['password']
+    if (pw == ''):
+        return render_template('error.jinja', error=('You must set a password for your account first'))
+    query = 'UPDATE users SET tuid = 0, twitchname = "" WHERE uid = %s'
+    cursor.execute(query, (session['uid'],))
+    session['tuid'] = 0
+    session['twitchname'] = ''
+    return redirect(url_for('editProfile'))
+
+
 @app.route('/tlinkok')
 def tlinkok():
     """
@@ -106,17 +141,21 @@ def tlinkok():
     twitchclient = TwitchHelix(client_id=twitchClientId, oauth_token=resp['access_token'])
     twitchuser = twitchclient.get_users()
     twitchuid = twitchuser[0]['id']
+    twitchname = twitchuser[0]['display_name']
     # Set the current user's tuid
     cursor = db.connection.cursor()
-    query = 'UPDATE users SET tuid = %s, twitchname WHERE uid = %s'
-    cursor.execute(query, [twitchuid, session['uid']])
+    query = 'UPDATE users SET tuid = %s, twitchname = %s WHERE uid = %s'
+    cursor.execute(query, [twitchuid, twitchname, session['uid']])
+    query = 'SELECT * FROM users WHERE uid = %s'
+    cursor.execute(query, (session['uid'],))
     row = cursor.fetchone()
     session['uid'] = row['uid']
     session['loggedIn'] = True
     session['username'] = row['username']
     session['displayname'] = row['displayname']
     session['tuid'] = twitchuid
-    return redirect(url_for('renderHome'))
+    session['twitchname'] = twitchname
+    return redirect(url_for('editProfile'))
 
 
 @app.route('/tlogin')
@@ -170,4 +209,6 @@ def logout():
     g.uid = None
     g.loggedin = False
     g.displayname = None
+    g.tuid = 0
+    g.twitchname = ''
     return render_template('home.jinja')

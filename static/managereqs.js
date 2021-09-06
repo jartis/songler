@@ -35,7 +35,7 @@ function writeReqList() {
         for (let i = listOffset; i < maxLength; i++) {
             let req = reqlist[i];
             let prioname = '';
-            if (req.prio == -1) { prioname = 'table-secondary'; }
+            if (req.prio == -1) { prioname = 'table-primary'; }
             if (req.prio == 1) { prioname = 'table-warning'; }
             tblHtml += `<tr class="${prioname}">`;
             tblHtml += `<td>${req.rname}</td>`;

@@ -7,15 +7,31 @@ const TITLE = 2;
 const PLAYS = 3;
 const LAST = 4;
 
+var anon = false;
+
 window.onload = function () {
+    const anonReq = new XMLHttpRequest();
+    anonReq.onload = function () {
+        anon = (this.responseText == '1');
+        loadSongList();
+    };
+    anonReq.open('GET', APIURL + '/getanon/' + listuid);
+    anonReq.send();
+};
+
+function loadSongList() {
     const req = new XMLHttpRequest();
     req.onload = function () {
         songlist = JSON.parse(this.responseText);
         writeSongList();
+        let tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        let tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
     };
     req.open('GET', APIURL + '/getpubsongs/' + listuid);
     req.send();
-};
+}
 
 function dosort(e) {
     let sorttype = e.getAttribute('data-field');
@@ -90,7 +106,15 @@ function writeSongList() {
         let lpd = Date.parse(song.lastplayed);
         if (song.lastplayed) { lp = new Intl.DateTimeFormat('en').format(lpd); }
         tblHtml += '<td>' + lp + '</td>';
-        tblHtml += '<td><button class="btn btn-sm btn-secondary" data-artist="' + song.artist.toString() + '" data-title="' + song.title.toString() + '" data-id="' + song.slid + '" onclick="reqSong(this)">Request This Song</button></td>';
+        tblHtml += '<td';
+        if (uid == 0 && !anon) {
+            tblHtml += ' data-bs-toggle="tooltip" data-bs-placement="left" title="Anonymous requests are disabled. You must log in to request a song from this user."';
+        }
+        tblHtml += '><button class="btn btn-sm btn-secondary" data-artist="' + song.artist.toString() + '" data-title="' + song.title.toString() + '" data-id="' + song.slid + '" onclick="reqSong(this)" ';
+        if (uid == 0 && !anon) {
+            tblHtml += 'disabled';
+        }
+        tblHtml += '>Request This Song</button></td>';
         tblHtml += '</tr>';
     }
     tblHtml += '<td colspan=5>';
@@ -141,6 +165,10 @@ function lastPage() {
 }
 
 function reqSong(e) {
+    if (!anon && uid == 0) {
+        makeToast(ERROR, '⚠️ Error', 'This user has anonymous requests disabled. You must log in to request a song.');
+        return;
+    }
     let slid = e.getAttribute('data-id');
     let artist = e.getAttribute('data-artist');
     let title = e.getAttribute('data-title');

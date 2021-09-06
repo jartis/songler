@@ -19,36 +19,41 @@ Song picker / request tracker / etc for Twitch
 * No adjacent wheel slots with matching colors
 * Show selected title on hover (Different from spinner title)
 * "Last Ignored"? Recently ignored songs should creep up less frequently?
-* Toggle resquester name display
 * Lock in "config mode" to ignore canvas clicks?
 * End-of-session reports (for import to practice trackers?)
 * Based on normalization, "fun reports" like most played artists?
 * Error handling for adding song if the server catches fire
 * Limits on requests for non logged in users
-* Toggle "Allow anonymous requests"
 * Add Fields to Personal profile
-* Link Twitch account to existing account
 * Link streamlabs account? Other accounts?
 * Maybe document the db structure in a good formal way?
 * "Object" out the, y'know, objects in the python backend
 * Put a toaster on the wheel page!!!
 * Set control values on config load
 * Interstitial "Initialize" page for making a stream overlay?
-* Password changing / recovery
-* Track separate usernames per system? (DisplayName independent?)
+* Password Recovery
 * Add most recent 'Last Played' to song info page
 * Nightbot command integration
 * DDG tabs / lyrics / lead sheet auto search (feeling ducky)
-* CI/CD for pushing to LightSail
 * Change last played date and play count from song management page
 * Document the wheel features a little better...
 * Update breadcrumbs / navbar when on appropriate page
 * Clean up all string interpolation
 * `Enter` to save song in song adding modal
-* Auto clear fields on modal dismiss
+* Toggle show/hide requester names on wheel from getShowNames
+* Consistent styling / table generation across pages
+* Verify password on change from profile page?
+ 
 
 ## Done
 
+* ~~Toggle "Allow anonymous requests"~~
+* ~~CI/CD for pushing to LightSail~~ Push locally with a batch file
+* ~~Toggle resquester name display~~
+* ~~Auto clear fields on modal dismiss~~
+* ~~Track separate usernames per system? (DisplayName independent?)~~
+* ~~Link Twitch account to existing account~~
+* ~~Password changing~~
 * ~~Fix displayname on songlist page (Use DB Canonicalization)~~
 * ~~Ignore "The" on string sorting~~
 * ~~Auto-fix casing~~

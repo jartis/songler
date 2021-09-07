@@ -37,7 +37,7 @@ function writeUserInfo() {
     pt += '<p>Display Name: ';
     pt += '<input type="text" name="displayName" id="displayName"></p>';
     if (Number(userinfo.tuid) > 0) {
-        pt += `<p>Linked Twitch user: <a href="https://twitch.tv/${userinfo.twitchname}">${userinfo.twitchname}</a></p>`;
+        pt += `<p>Linked Twitch user: <a href="https://twitch.tv/${userinfo.tname}">${userinfo.tname}</a></p>`;
         pt += '<p><button onclick="unlinkTwitch();" class="btn btn-danger">Unlink Twitch account</button></p>';
         // You *HAVE* a twitch account, wanna unlink it?
     } else {

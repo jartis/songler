@@ -18,7 +18,6 @@ function loadReqList() {
 // Fields: rid, slid, rname, artist, title, prio, timestamp
 // Defaults to sorted by priority first, then timestamp, oldest to newest
 
-
 function writeReqList() {
     let tblHtml = 'No requests in your queue!';
     if (reqlist.length > 0) {

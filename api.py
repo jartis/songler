@@ -175,7 +175,8 @@ def getUserInfo(uid):
     <uid> - The user to get the info about.
     """
     cursor = db.connection.cursor()
-    query = 'SELECT * FROM users WHERE uid = %s'
+    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames '
+    query += 'FROM users WHERE uid = %s'
     cursor.execute(query, (int(uid),))
     result = cursor.fetchone()
     return jsonify(result)
@@ -400,7 +401,7 @@ def setName():
     if (session['uid'] == 0):
         return 'NO'
     dname = request.json['dname']
-    query = 'SELECT * FROM users WHERE displayname = %s'
+    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames FROM users WHERE displayname = %s'
     cursor = db.connection.cursor()
     cursor.execute(query, (session['uid'], ))
     results = cursor.fetchall()
@@ -446,7 +447,7 @@ def getUsers():
     """
     Get a raw list of usernames and uids for populating autocomplete box.
     """
-    query = 'SELECT * FROM users'
+    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames FROM users'
     cursor = db.connection.cursor()
     cursor.execute(query)
     result = cursor.fetchall()

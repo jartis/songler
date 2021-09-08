@@ -55,7 +55,8 @@ def showSongList(user):
     """
     user = str(user)
     cursor = db.connection.cursor()
-    query = 'SELECT * FROM users WHERE displayname LIKE %s'
+    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames FROM users '
+    query += 'WHERE displayname LIKE %s'
     cursor.execute(query, [user, ])
     row = cursor.fetchone()
     if row is not None:

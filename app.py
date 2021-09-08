@@ -51,7 +51,7 @@ def before_request():
 ####################
 
 
-def addNewUser(username, password, email, displayname, uid=-1, tuid=''):
+def addNewUser(username, password, email, displayname, uid=-1, tuid='', tname='', sluid='', slname=''):
     """
     Adds a new user entry to the database.
     <username>: Desired username for new account.
@@ -61,14 +61,19 @@ def addNewUser(username, password, email, displayname, uid=-1, tuid=''):
     <tuid>: Twitch UID, if account was created with Twitch OAuth.
     """
     cursor = db.connection.cursor()
-    if tuid == '':
+    if tuid != '':
+        # Create a Twitch-based user
+        query = 'INSERT INTO users (username, password, email, tuid, tname, signup, displayname) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, %s)'
+        cursor.execute(query, (username, password,
+                       email, tuid, tname, username))
+    elif sluid != '':
+        query = 'INSERT INTO users (username, password, email, sluid, slname, signup, displayname) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, %s)'
+        cursor.execute(query, (username, password,
+                       email, sluid, slname, username))
+    else:
         # Create a Username/Password user
         query = 'INSERT INTO users (username, password, email, signup, displayname) VALUES (%s, %s, %s, CURRENT_TIMESTAMP, %s)'
         cursor.execute(query, (username, password, email, displayname))
-    else:
-        # Create a Twitch-based user
-        query = 'INSERT INTO users (username, password, email, tuid, signup, displayname) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, %s)'
-        cursor.execute(query, (username, password, email, tuid, username))
     query = 'SELECT uid FROM users WHERE username LIKE %s'
     cursor.execute(query, (username,))
     row = cursor.fetchone()
@@ -95,16 +100,18 @@ def getVideoId(link):
             return query.path.split('/')[2]
     return ''
 
+
 def getReqCount(uid):
     """
     Get count of requests for a user
     """
     cursor = db.connection.cursor()
-    query =  'SELECT COUNT(*) as count FROM requests '
+    query = 'SELECT COUNT(*) as count FROM requests '
     query += 'WHERE uid = %s'
     cursor.execute(query, (uid,))
     result = cursor.fetchone()['count']
     return result
+
 
 def findOrAddSong(artist, title):
     """

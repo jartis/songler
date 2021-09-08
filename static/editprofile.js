@@ -37,12 +37,16 @@ function writeUserInfo() {
     pt += '<p>Display Name: ';
     pt += '<input type="text" name="displayName" id="displayName"></p>';
     if (Number(userinfo.tuid) > 0) {
-        pt += `<p>Linked Twitch user: <a href="https://twitch.tv/${userinfo.twitchname}">${userinfo.twitchname}</a></p>`;
+        pt += `<p>Linked Twitch user: <a href="https://twitch.tv/${userinfo.tname}">${userinfo.tname}</a></p>`;
         pt += '<p><button onclick="unlinkTwitch();" class="btn btn-danger">Unlink Twitch account</button></p>';
-        // You *HAVE* a twitch account, wanna unlink it?
     } else {
-        // You *DON'T* have your twitch linked, U WAN?
         pt += '<p><button onclick="linkTwitch();" class="btn btn-primary">Connect your Twitch account</button></p>';
+    }
+    if (Number(userinfo.sluid) > 0) {
+        pt += `<p>Linked Streamlabs user: ${userinfo.slname}</p>`;
+        pt += '<p><button onclick="unlinkStreamlabs();" class="btn btn-danger">Unlink Streamlabs account</button></p>';
+    } else {
+        pt += '<p><button onclick="linkStreamlabs();" class="btn btn-primary">Connect your Streamlabs account</button></p>';
     }
     // PW stuff
     pt += '<div class="form-group">';
@@ -76,6 +80,14 @@ function unlinkTwitch() {
 
 function linkTwitch() {
     window.location = '/tlink';
+}
+
+function linkStreamlabs() {
+    window.location = '/sllink';
+}
+
+function unlinkStreamlabs() {
+    window.location = '/slunlink';
 }
 
 function setShowReqNames() {

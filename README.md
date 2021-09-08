@@ -25,7 +25,7 @@ Song picker / request tracker / etc for Twitch
 * Error handling for adding song if the server catches fire
 * Limits on requests for non logged in users
 * Add Fields to Personal profile
-* Link streamlabs account? Other accounts?
+* Link Other accounts?
 * Maybe document the db structure in a good formal way?
 * "Object" out the, y'know, objects in the python backend
 * Put a toaster on the wheel page!!!
@@ -43,10 +43,13 @@ Song picker / request tracker / etc for Twitch
 * Toggle show/hide requester names on wheel from getShowNames
 * Consistent styling / table generation across pages
 * Verify password on change from profile page?
+* Users created with Streamlabs don't have an email: Add a nag?
+* Add a 404 page
  
 
 ## Done
 
+* ~~Link Streamlabs account?~~
 * ~~Toggle "Allow anonymous requests"~~
 * ~~CI/CD for pushing to LightSail~~ Push locally with a batch file
 * ~~Toggle resquester name display~~

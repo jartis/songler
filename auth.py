@@ -51,9 +51,10 @@ def get_twitch_token(token=None):
 
     # API endpoint for adding a user
 
+
 @sloauth.tokengetter
 def get_sl_token():
-    return session.get('access_token')    
+    return session.get('access_token')
 
 
 @app.route('/adduser', methods=['POST', ])
@@ -68,8 +69,10 @@ def addUser():
     displayname = request.form['username']
     password = request.form['password']
     email = request.form['email']
-    uid = addNewUser(username, bcrypt.generate_password_hash(
-        password), email, displayname)
+    uid = addNewUser(username=username,
+                     password=bcrypt.generate_password_hash(password),
+                     email=email,
+                     displayname=username)
     session['username'] = username
     session['loggedIn'] = True
     session['uid'] = uid
@@ -137,11 +140,10 @@ def slauth():
     """
     Callback endpoint for Streamlabs OAuth account linking.
     """
-    if (session['uid'] == 0):
-        return render_template('error.jinja', error=('You must be logged in to perform this action'))
+    cursor = db.connection.cursor()
     code = request.args['code']
     url = "https://streamlabs.com/api/v1.0/token"
-    data= {
+    data = {
         'grant_type': 'authorization_code',
         'client_id': slClientId,
         'client_secret': slSecret,
@@ -151,64 +153,40 @@ def slauth():
     r = requests.post(url, data=data)
     res = r.json()
     if ('access_token' in res and 'refresh_token' in res):
-        session['slAccessToken'] = res['access_token']
-        session['slRefreshToken'] = res['refresh_token']
-    else:
-        # Error out - we couldn't get a token for whatever reason
-        return render_template('error.jinja', error=('You must be logged in to perform this action'))
-
-
-    print(res)
-
-@app.route('/slok')
-def slok():
-    print('1')
-
-
-#       {
-#      "streamlabs":{
-#         "id":3929217,
-#         "display_name":"sunnyding602"
-#      },
-#      "twitch":{
-#         "id":124287875,
-#         "display_name":"sunnyding602",
-#         "name":"sunnyding602"
-#      },
-#      "youtube":{
-#         "id":"UCuDKXjZv4B3F58xv_76gw",
-#         "title":"runxi@streamlabs.com"
-#      },
-#      "mixer":{
-#         "id":10969035,
-#         "name":"Flyfurrysnail"
-#      },
-#      "facebook":{
-#         "id":"1520473641329778",
-#         "name":"Sunny Ding"
-#      }
-#   }
-#     twitchclient = TwitchHelix(
-#         client_id=twitchClientId, oauth_token=resp['access_token'])
-#     twitchuser = twitchclient.get_users()
-#     twitchuid = twitchuser[0]['id']
-#     twitchname = twitchuser[0]['display_name']
-#     # Set the current user's tuid
-#     cursor = db.connection.cursor()
-#     query = 'UPDATE users SET tuid = %s, twitchname = %s WHERE uid = %s'
-#     cursor.execute(query, [twitchuid, twitchname, session['uid']])
-#     query = 'SELECT * FROM users WHERE uid = %s'
-#     cursor.execute(query, (session['uid'],))
-#     row = cursor.fetchone()
-#     session['uid'] = row['uid']
-#     session['loggedIn'] = True
-#     session['username'] = row['username']
-#     session['displayname'] = row['displayname']
-#     session['tuid'] = twitchuid
-#     session['twitchname'] = twitchname
-#     return redirect(url_for('editProfile'))
-
-
+        # Get the user info with this token
+        access_token = res['access_token']
+        refresh_token = res['refresh_token']
+        url = "https://streamlabs.com/api/v1.0/user?access_token=" + access_token
+        headers = {"Accept": "application/json"}
+        response = requests.request("GET", url, headers=headers)
+        userR = response.json()
+        sluid = userR['streamlabs']['id']
+        slname = userR['streamlabs']['display_name']
+        # Do we ADD the user, or UPDATE them?
+        if (session['uid'] == 0):
+            query = 'SELECT * FROM users WHERE sluid = %s'
+            cursor.execute(query, (sluid, ))
+            row = cursor.fetchone()
+            if row is None:
+                uid = addNewUser(username=slname,
+                                 password='',
+                                 email='',
+                                 displayname=slname,
+                                 uid=-1,
+                                 sluid=sluid,
+                                 slname=slname)
+                query = 'SELECT * FROM users WHERE uid = %s'
+                cursor.execute(query, (uid,))
+                row = cursor.fetchone()
+            # Set the session whatsits and let's rock!
+            session['uid'] = row['uid']
+            session['loggedIn'] = True
+            session['username'] = row['username']
+            session['displayname'] = row['displayname']
+        else:
+            query = 'UPDATE users SET sluid = %s, slname = %s WHERE uid = %s'
+            cursor.execute(query, (sluid, slname, session['uid']))
+        return redirect(url_for('editProfile'))
 
 
 @app.route('/tlink')
@@ -235,6 +213,25 @@ def twitchunlink():
     cursor.execute(query, (session['uid'],))
     session['tuid'] = 0
     session['tname'] = ''
+    return redirect(url_for('editProfile'))
+
+
+@app.route('/slunlink')
+def slunlink():
+    """
+    Endpoint for unlinking your Streamlabs account from existing account
+    # NOTE: You need to enforce setting a password here!
+    """
+    cursor = db.connection.cursor()
+    query = 'SELECT password FROM users WHERE uid = %s'
+    cursor.execute(query, (session['uid'],))
+    pw = cursor.fetchone()['password']
+    if (pw == ''):
+        return render_template('error.jinja', error=('You must set a password for your account first'))
+    query = 'UPDATE users SET tuid = 0, tname = "" WHERE uid = %s'
+    cursor.execute(query, (session['uid'],))
+    session['sluid'] = 0
+    session['slname'] = ''
     return redirect(url_for('editProfile'))
 
 
@@ -299,7 +296,13 @@ def authorized():
     cursor.execute(query, [twitchuid, ])
     row = cursor.fetchone()
     if row is None:
-        uid = addNewUser(username, '', email, -1, twitchuid)
+        uid = addNewUser(username=username,
+                         password='',
+                         email=email,
+                         displayname=username,
+                         uid=-1,
+                         tuid=twitchuid,
+                         tname=username)
         query = 'SELECT * FROM users WHERE uid = %s'
         cursor.execute(query, (uid,))
         row = cursor.fetchone()

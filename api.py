@@ -8,6 +8,9 @@ from flask_bcrypt import Bcrypt
 from flask_oauthlib.client import OAuth
 from enum import IntEnum
 from urllib.parse import urlparse
+from urllib import parse
+from thefuzz import fuzz
+from thefuzz import process
 
 
 @app.route('/api/v1/getconfig', methods=['GET', ])
@@ -218,6 +221,64 @@ def getRequests():
         cursor.execute(query, (uid,))
     result = cursor.fetchall()
     return jsonify(result)
+
+
+@app.route('/api/v1/nbreq', methods=['GET'])
+def nbreq():
+    """
+    Finds the closest match for a given search string and adds a request if able.
+    Takes get parameter(s) for a song title or artist+title.
+    If the request comes from Nightbot, we get some headers for free!
+    Nightbot-User: name=night&displayName=night&provider=twitch&providerId=11785491&userLevel=owner
+    Nightbot-Channel: name=night&displayName=Night&provider=twitch&providerId=11785491
+    """
+    userString = request.headers.get('Nightbot-User', None)
+    channelString = request.headers.get('Nightbot-Channel', None)
+    searchString = request.args.get('s', None)
+    if (channelString is None or userString is None or searchString is None):
+        return 'This endpoint can only be called by Nightbot.'
+    searchString = searchString.lower()
+    cursor = db.connection.cursor()
+    # Who is the request FOR?
+    channelInfo = dict(parse.parse_qsl(channelString))
+    channelName = channelInfo.get('displayName')
+    # Who is the request FROM?
+    userInfo = dict(parse.parse_qsl(userString))
+    reqUsername = userInfo.get('displayName')
+    # TODO: This is gross. Function this out.
+    # Sigh... get the UID from the twitch name for the channel...
+    query = 'SELECT uid FROM users WHERE tname = %s'
+    cursor.execute(query, (channelName,))
+    results = cursor.fetchall()
+    if (len(results) == 0):
+        return 'There was an error processing your request.'
+    channelUID = results[0]['uid']
+    # TODO: Rate limiting will go here.
+    # Then get all the public songs for the user...
+    query = 'SELECT slid, CONCAT(artists.artist, " - ", titles.title) as name '
+    query += 'FROM songlists INNER JOIN songs ON songlists.sid = songs.sid '
+    query += 'INNER JOIN artists ON artists.aid = songs.aid '
+    query += 'INNER JOIN titles ON titles.tid = songs.tid '
+    query += 'WHERE songlists.uid = %s'
+    cursor.execute(query, (channelUID,))
+    results = cursor.fetchall()
+    songnames = [r['name'].lower() for r in results]
+    match = process.extractOne(searchString, songnames)
+    if (match[1] < 75):  # Arbitrary limit for closest match
+        return 'No match found for your request.'
+    # Okay, get the ACTUAL song from that perfect match
+    song = next((s for s in results if s['name'].lower() == match[0]), None)
+    if (song is None):
+        return 'No match found for your request.'
+    slid = song['slid']
+    # FINALLY put in the actual request
+    query = 'INSERT INTO requests (uid, ruid, slid, timestamp, rname, prio) '
+    query += 'SELECT uid, %s, slid, NOW(), %s, %s FROM songlists '
+    query += 'WHERE slid = %s'
+    cursor.execute(query, (0, reqUsername, 0, slid))
+    db.connection.commit()
+    sn = song['name']
+    return f'Your request for {sn} has been added to the queue!'
 
 
 @app.route('/api/v1/addreq/<slid>', methods=['GET'])

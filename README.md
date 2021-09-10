@@ -33,7 +33,6 @@ Song picker / request tracker / etc for Twitch
 * Interstitial "Initialize" page for making a stream overlay?
 * Password Recovery
 * Add most recent 'Last Played' to song info page
-* Nightbot command integration
 * DDG tabs / lyrics / lead sheet auto search (feeling ducky)
 * Change last played date and play count from song management page
 * Document the wheel features a little better...
@@ -45,10 +44,12 @@ Song picker / request tracker / etc for Twitch
 * Verify password on change from profile page?
 * Users created with Streamlabs don't have an email: Add a nag?
 * Add a 404 page
- 
+* Add moderator abilities (user XX can mod my stream)
+* Document Nightbot API endpoint / command integration
 
 ## Done
 
+* ~~Nightbot command integration~~
 * ~~Link Streamlabs account?~~
 * ~~Toggle "Allow anonymous requests"~~
 * ~~CI/CD for pushing to LightSail~~ Push locally with a batch file

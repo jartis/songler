@@ -5,3 +5,4 @@ Flask_Bcrypt==0.7.1
 python_twitch_client==0.7.1
 twitch-python
 gevent
+thefuzz[speedup]

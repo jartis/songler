@@ -1,15 +1,38 @@
 # Songler
-Song picker / request tracker / etc for Twitch
+Song picker / request tracker / etc for Twitch (et al?)
 
-## Keyboard shortcuts (Wheel)
+## Documentation
+
+### Keyboard shortcuts (Wheel)
 
 `W` - Show/hide the song wheel
 `R` - Show/hide the request queue
 `C` - Show/hide the control panel
 
+### Nightbot Commands
+
+*Note:* In order to use this command in NightBot on your channel, you must have your Twitch
+account connected to your user account on Minstrelize.
+
+API Endpoints and sample commands:
+
+- `/api/v1/nbrand` - Place a random request on behalf of the user.
+  - !random : `$(urlfetch json https://minstrelize.com/api/v1/nbrand)`
+- `/api/v1/nbreq` - Fuzzy search for artist/title and request closest (public) match.
+  - !sr : `$(urlfetch json https://minstrelize.com/api/v1/nbreq?s=$(querystring))`
+
 ## Todo
 
+### General
+
 * Request add Sources: Chat (bits), donations (Streamlabs integration), uhhh other things?
+* "Last Ignored"? Recently ignored songs should creep up less frequently?
+* Update breadcrumbs / navbar when on appropriate page
+* Break "plays" out into a separate table, instead of "last played"
+* Add a 404 page
+
+### Wheel Overlay
+
 * "Winner" flash / confetti for last song on wheel?
 * Wheel Layout (pie chart wheel vs. slot machine spinner?)
 * Eat a food! Get a snackies! (Add Hydrate / End Stream / Snacko / Bankrupt to the wheel?!?)
@@ -18,37 +41,54 @@ Song picker / request tracker / etc for Twitch
 * Configuration for wheel palettes / random wheel colors
 * No adjacent wheel slots with matching colors
 * Show selected title on hover (Different from spinner title)
-* "Last Ignored"? Recently ignored songs should creep up less frequently?
+* Put a toaster on the wheel page!!!
 * Lock in "config mode" to ignore canvas clicks?
+* Interstitial "Initialize" page for making a stream overlay?
+* Toggle show/hide requester names on wheel from getShowNames
+
+### Stream Tracking / Management
+
 * End-of-session reports (for import to practice trackers?)
 * Based on normalization, "fun reports" like most played artists?
-* Error handling for adding song if the server catches fire
 * Limits on requests for non logged in users
-* Add Fields to Personal profile
-* Link Other accounts?
-* Maybe document the db structure in a good formal way?
-* "Object" out the, y'know, objects in the python backend
-* Put a toaster on the wheel page!!!
-* Set control values on config load
-* Interstitial "Initialize" page for making a stream overlay?
-* Password Recovery
-* Add most recent 'Last Played' to song info page
 * DDG tabs / lyrics / lead sheet auto search (feeling ducky)
+
+### Song List Management
+
+* Error handling for adding song if the server catches fire
+* Add most recent 'Last Played' to song info page
 * Change last played date and play count from song management page
-* Document the wheel features a little better...
-* Update breadcrumbs / navbar when on appropriate page
-* Clean up all string interpolation
 * `Enter` to save song in song adding modal
-* Toggle show/hide requester names on wheel from getShowNames
-* Consistent styling / table generation across pages
+* Add moderator abilities (user XX can mod my stream)
+
+### User Management / Viewing
+
+* Add Fields to Personal profile
+* Link Other accounts? (YouTube / FB / PayPal / etc)
+* Password Recovery
 * Verify password on change from profile page?
 * Users created with Streamlabs don't have an email: Add a nag?
-* Add a 404 page
-* Add moderator abilities (user XX can mod my stream)
-* Document Nightbot API endpoint / command integration
+
+### Refactoring / Tech Debt
+
+* Maybe document the db structure in a good formal way?
+* "Object" out the, y'know, objects in the python backend
+* Set control values on config load
+* Document the wheel features a little better...
+* Clean up all string interpolation
+* Consistent styling / table generation across pages
+
+### Nightbot Integration
+
+* Fix fuzzy song matching
+* Additional stats / commands
 
 ## Done
 
+* ~~Document Nightbot API endpoint / command integration~~
+* ~~'rr' / 'random' command for "add a random-eligible song"~~
+* ~~'WS' endpoint to withdraw request / cancel last request~~
+* ~~Fix play button in request list manager~~
 * ~~Nightbot command integration~~
 * ~~Link Streamlabs account?~~
 * ~~Toggle "Allow anonymous requests"~~
@@ -122,17 +162,3 @@ Song picker / request tracker / etc for Twitch
 * ~~Wheel Clicky Sounds~~
 * ~~Wheel palettes?~~
 * ~~Show currently highlighted song larger under wheel~~
-
-## Questions
-
-1. Due to the latency of streaming, is websocket-style speed of connection necessary? Would a 30s/1m poll be enough to handle things? Note that this would ABSOLUTELY require an event queue of some kind, but websocket communication "might not".
-  * Right now, the wheel polls on a 5 second timer. I will probably increase that time, and go with a poll instead of something immediate like websockets - if I'm already streaming, even though it's a tiny connection... although WS is pub/sub so it would send heartbeats but only a payload if there WAS a payload. Merits further debate.
-2. What do we do to build the initial wheel? How parameterizable should that be? Is the wheel completely optional for the complete overlay? (ie., use the queue(s) without a wheel)
-  * I think making the wheel visibility toggle-able is a good call, so you can have the queue without the wheel, or turn it on-and-off on the fly. Queue visibility is kind of necessary, though, IMHO. Keyboard shortcuts for enable/disable wheel?
-3. What's the structure for authorization and the assorted streamer/viewer pages? What auth mechanism do I want to use?
-4. Does ytid belong on a SONG level, or a SONGLIST entry level? 
-   * This is going to live at a SONGLIST level, you may want a different version/link than another user. 
-
-## Notes
-
-* I'm currently using UID 1 in my local DB for testing, and UID 2 for my actual tracking

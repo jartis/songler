@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 from urllib import parse
 from thefuzz import fuzz
 from thefuzz import process
+import random
 
 
 @app.route('/api/v1/getconfig', methods=['GET', ])
@@ -136,17 +137,18 @@ def refillUserSongs():
     return jsonify(result[0:count])
 
 
-@app.route('/api/v1/play/<slid>', methods=['GET'])
-def playSong(slid):
+@app.route('/api/v1/play/<rid>', methods=['GET'])
+def playSong(rid):
     """
-    Increments the play count and sets the last played date to now, for a given songlist id.
-    <slid>: Songlist ID to update.
+    Increments the play count and sets the last played date to now, for a given request id.
+    <rid>: Request ID to update.
     TODO: Add authorization that this is called by the owning user.
     """
-    slid = int(slid)
+    rid = int(rid)
     cursor = db.connection.cursor()
-    query = 'UPDATE songlists SET plays = plays + 1, lastplayed = current_date() WHERE slid = %s'
-    cursor.execute(query, (slid,))
+    query = 'UPDATE songlists SET plays = plays + 1, lastplayed = current_date() WHERE slid = '
+    query += '(SELECT slid FROM requests WHERE requests.rid = %s)'
+    cursor.execute(query, (rid,))
     result = cursor.fetchall()
     return jsonify(result)
 
@@ -223,6 +225,52 @@ def getRequests():
     return jsonify(result)
 
 
+@app.route('/api/v1/nbrand', methods=['GET'])
+def nbrand():
+    """
+    Adds a random song request from the user (via Nightbot).
+    """
+    userString = request.headers.get('Nightbot-User', None)
+    channelString = request.headers.get('Nightbot-Channel', None)
+    if (channelString is None or userString is None):
+        return 'This endpoint can only be called by Nightbot.'
+    cursor = db.connection.cursor()
+    # Who is the request FOR?
+    channelInfo = dict(parse.parse_qsl(channelString))
+    channelName = channelInfo.get('displayName')
+    # Who is the request FROM?
+    userInfo = dict(parse.parse_qsl(userString))
+    reqUsername = userInfo.get('displayName')
+    # TODO: This is gross. Function this out.
+    # Sigh... get the UID from the twitch name for the channel...
+    query = 'SELECT uid FROM users WHERE tname = %s'
+    cursor.execute(query, (channelName,))
+    results = cursor.fetchall()
+    if (len(results) == 0):
+        return 'There was an error processing your request.'
+    channelUID = results[0]['uid']
+    # TODO: Rate limiting will go here.
+    # Then get all the public songs for the user...
+    query = 'SELECT slid, CONCAT(artists.artist, " - ", titles.title) as name '
+    query += 'FROM songlists INNER JOIN songs ON songlists.sid = songs.sid '
+    query += 'INNER JOIN artists ON artists.aid = songs.aid '
+    query += 'INNER JOIN titles ON titles.tid = songs.tid '
+    query += 'WHERE songlists.uid = %s'
+    cursor.execute(query, (channelUID,))
+    results = cursor.fetchall()
+    # Now pick one at random...
+    random.shuffle(results)
+    song = results[0]
+    slid = song['slid']
+    # FINALLY put in the actual request
+    query = 'INSERT INTO requests (uid, ruid, slid, timestamp, rname, prio) '
+    query += 'SELECT uid, %s, slid, NOW(), %s, %s FROM songlists '
+    query += 'WHERE slid = %s'
+    cursor.execute(query, (0, reqUsername, 0, slid))
+    db.connection.commit()
+    sn = song['name']
+    return f'{reqUsername}, Your request for {sn} has been added to the queue!'
+
 @app.route('/api/v1/nbreq', methods=['GET'])
 def nbreq():
     """
@@ -278,7 +326,44 @@ def nbreq():
     cursor.execute(query, (0, reqUsername, 0, slid))
     db.connection.commit()
     sn = song['name']
-    return f'Your request for {sn} has been added to the queue!'
+    return f'{reqUsername}, your request for {sn} has been added to the queue!'
+
+
+@app.route('/api/v1/nbws', methods=['GET'])
+def nbws():
+    """
+    Withdraws (removes) the calling user's last request.
+    """
+    userString = request.headers.get('Nightbot-User', None)
+    channelString = request.headers.get('Nightbot-Channel', None)
+    if (channelString is None or userString is None):
+        return 'This endpoint can only be called by Nightbot.'
+    cursor = db.connection.cursor()
+    # Who is the withdraw request FOR?
+    channelInfo = dict(parse.parse_qsl(channelString))
+    channelName = channelInfo.get('displayName')
+    # Who is the withdraw request FROM?
+    userInfo = dict(parse.parse_qsl(userString))
+    reqUsername = userInfo.get('displayName')
+    # TODO: This is gross. Function this out.
+    # Sigh... get the UID from the twitch name for the channel...
+    query = 'SELECT uid FROM users WHERE tname = %s'
+    cursor.execute(query, (channelName,))
+    results = cursor.fetchall()
+    if (len(results) == 0):
+        return 'There was an error processing your request.'
+    channelUID = results[0]['uid']
+    # Get the latest request from the request user for the channel user
+    query =  'SELECT rid FROM requests WHERE rname = %s AND uid = %s '
+    query += 'ORDER BY timestamp DESC'
+    cursor.execute(query, (reqUsername, channelUID,))
+    rres = cursor.fetchone()
+    if (rres is None):
+        return (f'{reqUsername} has no requests in the queue.')
+    # All right, then knock it out!
+    query =  'DELETE FROM requests WHERE rid = %s'
+    cursor.execute(query, (rres['rid'],))
+    return (f'{reqUsername} has withdrawn their last request.')
 
 
 @app.route('/api/v1/addreq/<slid>', methods=['GET'])

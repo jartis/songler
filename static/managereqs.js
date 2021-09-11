@@ -121,9 +121,8 @@ function removeReq(e) {
     req.send();
 }
 
-function playReq() {
+function playReq(e) {
     let rid = e.getAttribute('data-rid');
-    let slid = e.getAttribute('data-slid');
     let title = e.getAttribute('data-title');
     const req = new XMLHttpRequest();
     req.onload = function () {
@@ -136,6 +135,6 @@ function playReq() {
         rmreq.open('GET', APIURL + '/removereq/' + rid);
         rmreq.send();
     };
-    req.open('GET', APIURL + '/play/' + slid);
+    req.open('GET', APIURL + '/play/' + rid);
     req.send();
 }

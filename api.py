@@ -312,7 +312,7 @@ def nbreq():
     results = cursor.fetchall()
     songnames = [r['name'].lower() for r in results]
     match = process.extractOne(searchString, songnames)
-    if (match[1] < 75):  # Arbitrary limit for closest match
+    if (match[1] < 90):  # Arbitrary limit for closest match
         return 'No match found for your request.'
     # Okay, get the ACTUAL song from that perfect match
     song = next((s for s in results if s['name'].lower() == match[0]), None)

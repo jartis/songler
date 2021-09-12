@@ -17,9 +17,11 @@ account connected to your user account on Minstrelize.
 API Endpoints and sample commands:
 
 - `/api/v1/nbrand` - Place a random request on behalf of the user.
-  - !random : `$(urlfetch json https://minstrelize.com/api/v1/nbrand)`
+  - !random : `$(urlfetch https://minstrelize.com/api/v1/nbrand)`
 - `/api/v1/nbreq` - Fuzzy search for artist/title and request closest (public) match.
-  - !sr : `$(urlfetch json https://minstrelize.com/api/v1/nbreq?s=$(querystring))`
+  - !sr : `$(urlfetch https://minstrelize.com/api/v1/nbreq?s=$(querystring))`
+- `/api/v1/nbws` - Withdraw calling user's last request for the current channel
+  - !ws : `$(urlfetch https://minstrelize.com/api/v1/nbws)`
 
 ## Todo
 
@@ -45,6 +47,7 @@ API Endpoints and sample commands:
 * Lock in "config mode" to ignore canvas clicks?
 * Interstitial "Initialize" page for making a stream overlay?
 * Toggle show/hide requester names on wheel from getShowNames
+* Set control values on config load
 
 ### Stream Tracking / Management
 
@@ -73,15 +76,16 @@ API Endpoints and sample commands:
 
 * Maybe document the db structure in a good formal way?
 * "Object" out the, y'know, objects in the python backend
-* Set control values on config load
 * Document the wheel features a little better...
 * Clean up all string interpolation
 * Consistent styling / table generation across pages
 
 ### Nightbot Integration
 
-* Fix fuzzy song matching
+* Fix fuzzy song matching (Increased pct threshold to 90 from 75...)
 * Additional stats / commands
+* !toast
+* !crash
 
 ## Done
 

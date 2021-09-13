@@ -442,7 +442,7 @@ function playSong(song) {
     // req.onload = function () {
     //     return true;
     // };
-    req.open('GET', APIURL + '/play/' + song.slid, false);
+    req.open('GET', APIURL + '/playslid/' + song.slid, false);
     req.send();
     if (req.status == 200) {
         if (song.rid) {
@@ -631,7 +631,7 @@ window.onload = function () {
 function getConfig() {
     const req = new XMLHttpRequest();
     req.onload = function () {
-        if (this.responseText == '0') {
+        if (this.responseText == 'NG') {
             makeDefaultConfig();
             saveConfig();
         } else {

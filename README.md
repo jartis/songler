@@ -30,8 +30,12 @@ API Endpoints and sample commands:
 * Request add Sources: Chat (bits), donations (Streamlabs integration), uhhh other things?
 * "Last Ignored"? Recently ignored songs should creep up less frequently?
 * Update breadcrumbs / navbar when on appropriate page
-* Break "plays" out into a separate table, instead of "last played"
 * Add a 404 page
+* Move user options into a new table (config?)
+* Add config option for "rate limit requests"
+* How to handle multiple requests for same slid (priority? Hotlist?)
+* "Hotlist" overlay - Chime for aging requests?
+* Fix local dates/times in DB for plays table
 
 ### Wheel Overlay
 
@@ -60,7 +64,6 @@ API Endpoints and sample commands:
 
 * Error handling for adding song if the server catches fire
 * Add most recent 'Last Played' to song info page
-* Change last played date and play count from song management page
 * `Enter` to save song in song adding modal
 * Add moderator abilities (user XX can mod my stream)
 
@@ -79,6 +82,8 @@ API Endpoints and sample commands:
 * Document the wheel features a little better...
 * Clean up all string interpolation
 * Consistent styling / table generation across pages
+* Move all DB functionality out of Auth
+* Move all DB functionality out of Rendering (if any)
 
 ### Nightbot Integration
 
@@ -89,6 +94,10 @@ API Endpoints and sample commands:
 
 ## Done
 
+* ~~Move all DB functionality out of Nightbot~~
+* ~~Change last played date and play count from song management page~~
+* ~~Move all DB functionality into a separate file from API~~
+* ~~Break "plays" out into a separate table, instead of "last played"~~
 * ~~Document Nightbot API endpoint / command integration~~
 * ~~'rr' / 'random' command for "add a random-eligible song"~~
 * ~~'WS' endpoint to withdraw request / cancel last request~~

@@ -16,7 +16,7 @@ function getShowNames() {
         }
         loadReqList();
     };
-    reqr.open('GET', APIURL + '/getshowreq');
+    reqr.open('GET', APIURL + '/getshownames');
     reqr.send();
 }
 
@@ -88,6 +88,6 @@ function playReq(e) {
         rmreq.open('GET', APIURL + '/removereq/' + rid);
         rmreq.send();
     };
-    req.open('GET', APIURL + '/play/' + slid);
+    req.open('GET', APIURL + '/playslid/' + slid);
     req.send();
 }

@@ -19,7 +19,7 @@ function populateSearch() {
             optlist.push(entry);
         }
     };
-    req.open('GET', APIURL + '/allusers');
+    req.open('GET', APIURL + '/alluserdnames');
     req.send();
     // Add the songs
     const areq = new XMLHttpRequest();
@@ -47,7 +47,7 @@ function populateSearch() {
             optlist.push(entry);
         }
     };
-    sreq.open('GET', APIURL + '/allsongs');
+    sreq.open('GET', APIURL + '/allsonginfos');
     sreq.send();
 }
 

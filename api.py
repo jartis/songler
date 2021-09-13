@@ -1,9 +1,8 @@
-from app import app, db, addNewUser, getVideoId, findOrAddSong, getReqCount
+from app import app, addNewUser, getVideoId
 import auth
 import routes
 import random
 from flask import Flask, url_for, redirect, request, jsonify, render_template, g, session, flash
-from flask_mysqldb import MySQL
 from flask_bcrypt import Bcrypt
 from flask_oauthlib.client import OAuth
 from enum import IntEnum
@@ -11,97 +10,69 @@ from urllib.parse import urlparse
 from urllib import parse
 from thefuzz import fuzz
 from thefuzz import process
+from dbutil import *
 import random
 
 
 @app.route('/api/v1/getconfig', methods=['GET', ])
-def getOverlayConfig():
+def api_getconfig():
     """
     Pulls a blob of JSON configuration from the DB for a user.
-    Returns JSON, or 0 is no configuration is found.
+    Returns JSON, or 'NG' is no configuration is found.
     """
     if (session['uid']) == 0:
-        return '0'
-    cursor = db.connection.cursor()
-    query = 'SELECT * FROM overlays WHERE uid = %s'
-    cursor.execute(query, (session['uid'],))
-    row = cursor.fetchall()
-    if (len(row) > 0):
-        return jsonify(row[0])
-    return '0'
+        return 'NG'
+    result = getOverlayConfig(session['uid'])
+    if (result == ''):
+        return 'NG'
+    return jsonify(result)
 
 
 @app.route('/api/v1/saveconfig', methods=['POST', ])
-def saveOverlayConfig():
+def api_saveconfig():
     """
     Stores a blob of config data in the DB from an overlay page.
     """
     if (session['uid']) == 0:
-        return '0'  # TODO: Do this not-grossly
+        return 'NG'
     config = request.json['config']
     uid = session['uid']
-    cursor = db.connection.cursor()
-    query = 'SELECT * FROM overlays WHERE uid = %s'
-    cursor.execute(query, (uid,))
-    result = cursor.fetchall()
-    if len(result) == 0:
-        query = 'INSERT INTO overlays (config, uid) VALUES (%s, %s)'
-    else:
-        query = 'UPDATE overlays SET config = %s WHERE uid = %s'
-    cursor.execute(query, (config, uid,))
-    db.connection.commit()
-    result = cursor.fetchall()
-    return jsonify(result)
+    result = saveOverlayConfig(uid, config)
+    if (result == 0):
+        return 'NG'
+    return 'OK'
 
 
-@app.route('/api/v1/checkuser/<user>', methods=['GET', ])
-def checkuser(user):
+@app.route('/api/v1/checkuser/<username>', methods=['GET', ])
+def api_checkuser(username):
     """
     Searches for <user> as a username in the user table.
     Returns 1 or 0.
     """
-    user = str(user).replace('%', r'\%').replace('_', r'\_')
-    cursor = db.connection.cursor()
-    query = 'SELECT uid FROM users WHERE username LIKE %s'
-    cursor.execute(query, (user, ))
-    row = cursor.fetchone()
-    if row is not None:
-        return '1'
-    return '0'
+    return usernameInUse(username)
 
 
 @app.route('/api/v1/checkemail/<email>', methods=['GET', ])
-def checkemail(email):
+def api_checkemail(email):
     """
     Searches for <email> in the user table.
     Returns 1 or 0.
     """
-    email = str(email).replace('%', r'\%').replace('_', r'\_')
-    cursor = db.connection.cursor()
-    query = 'SELECT uid FROM users WHERE email LIKE %s'
-    cursor.execute(query, [email, ])
-    row = cursor.fetchone()
-    if row is not None:
-        return '1'
-    return '0'
+    return emailInUse(email)
 
 
+@app.route('/api/v1/allsongs', methods=['GET'])
 @app.route('/api/v1/allsongs/<uid>', methods=['GET'])
-def getAllUserSongs(uid):
+def api_allsongs(uid = -1):
     """
-    Gets all songs for a specified user <uid>. 
+    Gets all songs for the currently logged in user.
     Sorts by least played, then least recently played.
     """
-    uid = int(uid)
-    cursor = db.connection.cursor()
-    query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.public, songlists.plays, '
-    query += 'songlists.uid, songlists.lastplayed, songlists.wheel FROM songlists '
-    query += 'INNER JOIN songs ON songs.sid = songlists.sid '
-    query += 'INNER JOIN artists ON artists.aid = songs.aid '
-    query += 'INNER JOIN titles ON titles.tid = songs.tid '
-    query += 'WHERE uid = %s ORDER BY plays ASC, lastplayed ASC'
-    cursor.execute(query, (uid,))
-    result = cursor.fetchall()
+    if (uid == -1):
+        if (session['uid'] == 0):
+            return 'NG'
+        uid = int(session['uid'])
+    result = getUserSongs(uid, False)
     return jsonify(result)
 
 
@@ -123,72 +94,66 @@ def refillUserSongs():
     uid = request.args['uid']
     nolist = request.args['list']
     count = int(request.args['count'])
-    cursor = db.connection.cursor()
-    # NOTE: Get a whole wheel's worth just in case, but only return the top $count
-    query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.plays, songlists.uid '
-    query += 'FROM songlists INNER JOIN songs ON songs.sid = songlists.sid '
-    query += 'INNER JOIN artists ON artists.aid = songs.aid '
-    query += 'INNER JOIN titles ON titles.tid = songs.aid '
-    query += 'WHERE uid = %s AND slid NOT IN (%s) AND wheel = 1 '
-    query += 'ORDER BY plays ASC, lastplayed ASC LIMIT 50'
-    cursor.execute(query, (uid, nolist))
-    result = cursor.fetchall()
+    result = getRefillSongs(uid, nolist)
     random.shuffle(result)
     return jsonify(result[0:count])
 
 
-@app.route('/api/v1/play/<rid>', methods=['GET'])
-def playSong(rid):
+@app.route('/api/v1/playslid/<slid>', methods=['GET'])
+def api_playslid(slid):
+    """
+    Increments the play count and sets the last played date to now, for a given songlist id.
+    <slid>: Songlist ID to update.
+    TODO: Add authorization that this is called by the owning user.
+    """
+    slid = int(slid)
+    date = 0
+    if 'date' in request.args:
+        date = request.args['date']
+    count = playSong(slid, date)
+    if (count > 0):
+        return 'OK'
+    return 'NG'
+
+
+@app.route('/api/v1/playreq/<rid>', methods=['GET'])
+def api_playreq(rid):
     """
     Increments the play count and sets the last played date to now, for a given request id.
     <rid>: Request ID to update.
     TODO: Add authorization that this is called by the owning user.
     """
     rid = int(rid)
-    cursor = db.connection.cursor()
-    query = 'UPDATE songlists SET plays = plays + 1, lastplayed = current_date() WHERE slid = '
-    query += '(SELECT slid FROM requests WHERE requests.rid = %s)'
-    cursor.execute(query, (rid,))
-    result = cursor.fetchall()
-    return jsonify(result)
+    slid = getSlidFromRid(rid)
+    count = playSong(slid, 0)
+    if (count > 0):
+        return 'OK'
+    return 'NG'
 
 
 @app.route('/api/v1/getpubsongs/<uid>', methods=['GET'])
-def getPublicList(uid):
+def api_getpubsongs(uid):
     """
     Gets the full list of publicly visible songs for a user.
     <uid>: The user whose songlist we are getting.
-    TODO: Does not natively do any pagination.
-    TODO: Does not sort by default.
     """
     uid = int(uid)
-    cursor = db.connection.cursor()
-    query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.plays, songlists.lastplayed '
-    query += 'FROM songlists INNER JOIN songs ON songs.sid = songlists.sid '
-    query += 'INNER JOIN artists ON songs.aid = artists.aid '
-    query += 'INNER JOIN titles ON songs.tid = titles.tid '
-    query += 'WHERE uid = %s AND public = 1'
-    cursor.execute(query, (uid,))
-    result = cursor.fetchall()
+    result = getUserSongs(uid, True)
     return jsonify(result)
 
 
 @app.route('/api/v1/userinfo/<uid>', methods=['GET'])
-def getUserInfo(uid):
+def api_userinfo(uid):
     """
     Gets the username, Twitch UID, membership date from the user table for a user.
     <uid> - The user to get the info about.
     """
-    cursor = db.connection.cursor()
-    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames '
-    query += 'FROM users WHERE uid = %s'
-    cursor.execute(query, (int(uid),))
-    result = cursor.fetchone()
+    result = getUserInfo(int(uid))
     return jsonify(result)
 
 
 @app.route('/api/v1/reqcount', methods=['GET'])
-def reqCount():
+def api_reqcount():
     """
     Gets count of requests for current logged in user.
     """
@@ -199,175 +164,21 @@ def reqCount():
 
 
 @app.route('/api/v1/getreqs', methods=['GET'])
-def getRequests():
+def api_getreqs():
     """
     Gets the pending requests for current logged in user.
     TODO: Support actually limiting the number of requests to grab out of the request MQ
     """
-    uid = g.uid
+    uid = session['uid']
     limit = 0
     if 'limit' in request.args:
         limit = int(request.args['limit'])
-    cursor = db.connection.cursor()
-    query = 'SELECT requests.rid, requests.slid, requests.rname, artists.artist, titles.title, '
-    query += 'requests.prio, requests.timestamp FROM requests '
-    query += 'INNER JOIN songlists ON requests.uid = songlists.uid '
-    query += 'AND requests.slid = songlists.slid INNER JOIN songs ON songs.sid = songlists.sid '
-    query += 'INNER JOIN titles ON titles.tid = songs.tid '
-    query += 'INNER JOIN artists ON artists.aid = songs.aid '
-    query += 'WHERE requests.uid = %s ORDER BY requests.prio DESC, requests.timestamp ASC'
-    if (limit > 0):
-        query += ' LIMIT %s'
-        cursor.execute(query, (uid, limit,))
-    else:
-        cursor.execute(query, (uid,))
-    result = cursor.fetchall()
+    result = getRequests(uid, limit)
     return jsonify(result)
 
 
-@app.route('/api/v1/nbrand', methods=['GET'])
-def nbrand():
-    """
-    Adds a random song request from the user (via Nightbot).
-    """
-    userString = request.headers.get('Nightbot-User', None)
-    channelString = request.headers.get('Nightbot-Channel', None)
-    if (channelString is None or userString is None):
-        return 'This endpoint can only be called by Nightbot.'
-    cursor = db.connection.cursor()
-    # Who is the request FOR?
-    channelInfo = dict(parse.parse_qsl(channelString))
-    channelName = channelInfo.get('displayName')
-    # Who is the request FROM?
-    userInfo = dict(parse.parse_qsl(userString))
-    reqUsername = userInfo.get('displayName')
-    # TODO: This is gross. Function this out.
-    # Sigh... get the UID from the twitch name for the channel...
-    query = 'SELECT uid FROM users WHERE tname = %s'
-    cursor.execute(query, (channelName,))
-    results = cursor.fetchall()
-    if (len(results) == 0):
-        return 'There was an error processing your request.'
-    channelUID = results[0]['uid']
-    # TODO: Rate limiting will go here.
-    # Then get all the public songs for the user...
-    query = 'SELECT slid, CONCAT(artists.artist, " - ", titles.title) as name '
-    query += 'FROM songlists INNER JOIN songs ON songlists.sid = songs.sid '
-    query += 'INNER JOIN artists ON artists.aid = songs.aid '
-    query += 'INNER JOIN titles ON titles.tid = songs.tid '
-    query += 'WHERE songlists.uid = %s'
-    cursor.execute(query, (channelUID,))
-    results = cursor.fetchall()
-    # Now pick one at random...
-    random.shuffle(results)
-    song = results[0]
-    slid = song['slid']
-    # FINALLY put in the actual request
-    query = 'INSERT INTO requests (uid, ruid, slid, timestamp, rname, prio) '
-    query += 'SELECT uid, %s, slid, NOW(), %s, %s FROM songlists '
-    query += 'WHERE slid = %s'
-    cursor.execute(query, (0, reqUsername, 0, slid))
-    db.connection.commit()
-    sn = song['name']
-    return f'{reqUsername}, Your request for {sn} has been added to the queue!'
-
-@app.route('/api/v1/nbreq', methods=['GET'])
-def nbreq():
-    """
-    Finds the closest match for a given search string and adds a request if able.
-    Takes get parameter(s) for a song title or artist+title.
-    If the request comes from Nightbot, we get some headers for free!
-    Nightbot-User: name=night&displayName=night&provider=twitch&providerId=11785491&userLevel=owner
-    Nightbot-Channel: name=night&displayName=Night&provider=twitch&providerId=11785491
-    """
-    userString = request.headers.get('Nightbot-User', None)
-    channelString = request.headers.get('Nightbot-Channel', None)
-    searchString = request.args.get('s', None)
-    if (channelString is None or userString is None or searchString is None):
-        return 'This endpoint can only be called by Nightbot.'
-    searchString = searchString.lower()
-    cursor = db.connection.cursor()
-    # Who is the request FOR?
-    channelInfo = dict(parse.parse_qsl(channelString))
-    channelName = channelInfo.get('displayName')
-    # Who is the request FROM?
-    userInfo = dict(parse.parse_qsl(userString))
-    reqUsername = userInfo.get('displayName')
-    # TODO: This is gross. Function this out.
-    # Sigh... get the UID from the twitch name for the channel...
-    query = 'SELECT uid FROM users WHERE tname = %s'
-    cursor.execute(query, (channelName,))
-    results = cursor.fetchall()
-    if (len(results) == 0):
-        return 'There was an error processing your request.'
-    channelUID = results[0]['uid']
-    # TODO: Rate limiting will go here.
-    # Then get all the public songs for the user...
-    query = 'SELECT slid, CONCAT(artists.artist, " - ", titles.title) as name '
-    query += 'FROM songlists INNER JOIN songs ON songlists.sid = songs.sid '
-    query += 'INNER JOIN artists ON artists.aid = songs.aid '
-    query += 'INNER JOIN titles ON titles.tid = songs.tid '
-    query += 'WHERE songlists.uid = %s'
-    cursor.execute(query, (channelUID,))
-    results = cursor.fetchall()
-    songnames = [r['name'].lower() for r in results]
-    match = process.extractOne(searchString, songnames)
-    if (match[1] < 90):  # Arbitrary limit for closest match
-        return 'No match found for your request.'
-    # Okay, get the ACTUAL song from that perfect match
-    song = next((s for s in results if s['name'].lower() == match[0]), None)
-    if (song is None):
-        return 'No match found for your request.'
-    slid = song['slid']
-    # FINALLY put in the actual request
-    query = 'INSERT INTO requests (uid, ruid, slid, timestamp, rname, prio) '
-    query += 'SELECT uid, %s, slid, NOW(), %s, %s FROM songlists '
-    query += 'WHERE slid = %s'
-    cursor.execute(query, (0, reqUsername, 0, slid))
-    db.connection.commit()
-    sn = song['name']
-    return f'{reqUsername}, your request for {sn} has been added to the queue!'
-
-
-@app.route('/api/v1/nbws', methods=['GET'])
-def nbws():
-    """
-    Withdraws (removes) the calling user's last request.
-    """
-    userString = request.headers.get('Nightbot-User', None)
-    channelString = request.headers.get('Nightbot-Channel', None)
-    if (channelString is None or userString is None):
-        return 'This endpoint can only be called by Nightbot.'
-    cursor = db.connection.cursor()
-    # Who is the withdraw request FOR?
-    channelInfo = dict(parse.parse_qsl(channelString))
-    channelName = channelInfo.get('displayName')
-    # Who is the withdraw request FROM?
-    userInfo = dict(parse.parse_qsl(userString))
-    reqUsername = userInfo.get('displayName')
-    # TODO: This is gross. Function this out.
-    # Sigh... get the UID from the twitch name for the channel...
-    query = 'SELECT uid FROM users WHERE tname = %s'
-    cursor.execute(query, (channelName,))
-    results = cursor.fetchall()
-    if (len(results) == 0):
-        return 'There was an error processing your request.'
-    channelUID = results[0]['uid']
-    # Get the latest request from the request user for the channel user
-    query =  'SELECT rid FROM requests WHERE rname = %s AND uid = %s '
-    query += 'ORDER BY timestamp DESC'
-    cursor.execute(query, (reqUsername, channelUID,))
-    rres = cursor.fetchone()
-    if (rres is None):
-        return (f'{reqUsername} has no requests in the queue.')
-    # All right, then knock it out!
-    query =  'DELETE FROM requests WHERE rid = %s'
-    cursor.execute(query, (rres['rid'],))
-    return (f'{reqUsername} has withdrawn their last request.')
-
-
 @app.route('/api/v1/addreq/<slid>', methods=['GET'])
-def addRequest(slid):
+def api_addreq(slid):
     """
     Adds a request to the request MQ. Assumes the request source from the session's UID.
     Returns 'QF' if requester has a requests in the target users MQ already - UNLESS you are the song owner.
@@ -378,48 +189,35 @@ def addRequest(slid):
     if (g.uid is not None):
         ruid = g.uid
         rname = g.displayname
+    # TODO: Fix this priority crud
     prio = 0
     if (request.args.get('p') is not None):
         prio = int(request.args.get('p'))
     slid = int(slid)
-    cursor = db.connection.cursor()
-    # First, a rate limit check - is there a request for target user in the Request MQ from us alread?
-    if (ruid > 0):
-        query = 'SELECT rid, uid FROM requests WHERE ruid = %s AND uid IN '
-        query += '(SELECT uid FROM songlists WHERE uid = %s)'
-        cursor.execute(query, (ruid, slid,))
-        result = cursor.fetchall()
-        if (len(result) > 0):
-            if (result['uid'] != session['uid']):
-                # Only bail out if the song owner isn't the one requesting. You can fill your own queue.
-                return "QF"
-    query = 'INSERT INTO requests (uid, ruid, slid, timestamp, rname, prio) '
-    query += 'SELECT uid, %s, slid, NOW(), %s, %s FROM songlists '
-    query += 'WHERE slid = %s'
-    cursor.execute(query, (ruid, rname, prio, slid))
-    db.connection.commit()
-    result = cursor.fetchall()
-    return 'OK'
+    # First, a rate limit check - is there a request for target user in the
+    # Request MQ from us alread?
+    if (canMakeRequest(ruid, slid) is False):
+        return 'QF'
+    count = addRequest(ruid, rname, prio, slid)
+    if (count > 0):
+        return 'OK'
+    return 'NG'
 
 
 @app.route('/api/v1/removereq/<rid>', methods=['GET'])
-def removeRequest(rid):
+def api_removereq(rid):
     """
     Removes a request from the Request MQ.
     <rid>: Request id to remove.
     """
-    rid = int(rid)
-    cursor = db.connection.cursor()
-    query = 'DELETE FROM requests WHERE rid = %s'
-    query += ' AND (ruid = %s OR uid = %s)'
-    cursor.execute(query, (rid, g.uid, g.uid,))
-    db.connection.commit()
-    result = cursor.fetchall()
-    return jsonify(result)
+    count = removeRequest(int(rid), session['uid'])
+    if (count > 0):
+        return 'OK'
+    return 'NG'
 
 
 @app.route('/api/v1/addsong', methods=['POST'])
-def addSong():
+def api_addsong():
     """
     Adds a new song to a user's songlist.
     Creates a new artist and title entry if necessary.
@@ -433,49 +231,30 @@ def addSong():
     link = request.json['link']
     sid = findOrAddSong(songartist, songtitle)
     ytid = getVideoId(link)
-    cursor = db.connection.cursor()
-    # Check if it already exists!
-    query = 'SELECT COUNT(*) as count FROM songlists WHERE uid = %s AND sid = %s'
-    cursor.execute(query, (uid, sid,))
-    result = cursor.fetchone()['count']
-    if int(result) > 0:
+    count = findSongOnUserSonglist(sid, uid)
+    if (count > 0):
         return 'SE'
-    query = 'INSERT INTO songlists (uid, sid, public, ytid, wheel) VALUES (%s, %s, %s, %s, %s)'
-    cursor.execute(query, (uid, sid, public, ytid, wheel))
-    db.connection.commit()
-    result = cursor.fetchall()
-    return 'OK'
+    count = addSongToSonglist(uid, sid, ytid, public, wheel)
+    if (count > 0):
+        return 'OK'
+    return 'NG'
 
 
 @app.route('/api/v1/artistinfo/<aid>', methods=['GET'])
-def getArtistInfo(aid):
+def api_artistinfo(aid):
     """
     Gets artist 'profile' info for a specified artist id.
     <aid> - Artist ID to get profile page for.
     """
-    query = 'SELECT artist FROM artists '
-    query += 'WHERE artists.aid = %s'
-    cursor = db.connection.cursor()
-    cursor.execute(query, (int(aid),))
-    result = cursor.fetchone()
-    # Get the other songs from this artist
-    query = 'SELECT titles.title, songs.sid FROM songs '
-    query += 'INNER JOIN titles ON songs.tid = titles.tid '
-    query += 'WHERE songs.aid = %s'
-    cursor.execute(query, (int(aid),))
-    result['songs'] = cursor.fetchall()
-    # TODO: Get streamers that play this artist
-    query = 'SELECT DISTINCT displayname FROM users '
-    query += 'INNER JOIN songlists ON songlists.uid = users.uid '
-    query += 'INNER JOIN songs ON songlists.sid = songs.sid '
-    query += 'WHERE songs.aid = %s AND songlists.public = TRUE'
-    cursor.execute(query, (int(aid),))
-    result['users'] = cursor.fetchall()
-    return jsonify(result)
+    aid = int(aid)
+    artist = getArtistInfo(aid)
+    artist['songs'] = getSongsForArtist(aid)
+    artist['users'] = getUsersForArtist(aid)
+    return jsonify(artist)
 
 
 @app.route('/api/v1/setshowreq', methods=['POST'])
-def setShowReq():
+def api_setshownames():
     """
     Sets the "Show/Hide requester names" flag on the current logged in user's account.
     POST: show = 0/1 for the flag (1 to show, 0 to hide)
@@ -483,209 +262,159 @@ def setShowReq():
     if (session['uid'] == 0):
         return 'NG'
     show = int(request.json['show'])
-    query = 'UPDATE users SET showreqnames = %s WHERE uid = %s'
-    cursor = db.connection.cursor()
-    cursor.execute(query, (show, session['uid'],))
-    if (show > 0):
-        return 'Y'
+    result = setShowNames(uid, show)
+    if (result > 0):
+        return str(show)
     return 'N'
 
 
 @app.route('/api/v1/setanon', methods=['POST'])
-def setAnon():
+def api_setanon():
     """
     Sets the "Allow anonymous requests" flag on the current logged in user's account.
     POST: show = 0/1 for the flag (1 to show, 0 to hide)
     """
     if (session['uid'] == 0):
         return 'NG'
-    show = int(request.json['show'])
-    query = 'UPDATE users SET anon = %s WHERE uid = %s'
-    cursor = db.connection.cursor()
-    cursor.execute(query, (show, session['uid'],))
-    if (show > 0):
-        return 'Y'
-    return 'N'
+    anon = int(request.json['anon'])
+    result = setAnon(session['uid'], show)
+    if (result > 0):
+        return str(anon)
+    return 'NG'
 
 
 @app.route('/api/v1/getshowreq', methods=['GET'])
-def getShowReq():
+@app.route('/api/v1/getshowreq/<uid>', methods=['GET'])
+def api_getshownames(uid=0):
     """
     Gets the show/hide requester names flag for the current logged in user.
     Defaults to a zero if not logged in or anything like that.
     """
-    if (session['uid'] == 0):
-        return '0'
-    query = 'SELECT showreqnames FROM users WHERE uid = %s'
-    cursor = db.connection.cursor()
-    cursor.execute(query, (session['uid'],))
-    result = cursor.fetchone()
-    return str(result['showreqnames'])
+    if (uid == 0):
+        if (session['uid'] == 0):
+            return 'NG'
+        uid = int(session['uid'])
+    return getShowNames(uid)
 
 
+@app.route('/api/v1/getanon', methods=['GET'])
 @app.route('/api/v1/getanon/<uid>', methods=['GET'])
-def getAnon(uid):
+def api_getanon(uid=0):
     """
     Gets the allow anonymous requests flag for the current logged in user.
     Defaults to a zero if not logged in or anything like that.
     """
     uid = int(uid)
     if (uid == 0):
-        return '0'
-    query = 'SELECT anon FROM users WHERE uid = %s'
-    cursor = db.connection.cursor()
-    cursor.execute(query, (uid,))
-    result = cursor.fetchone()
-    return str(result['anon'])
+        if (session['uid'] == 0):
+            return 'NG'
+        uid = int(session['uid'])
+    return getAnon(uid)
 
 
-@app.route('/api/v1/setname', methods=['POST'])
-def setName():
+@app.route('/api/v1/setdisplayname', methods=['POST'])
+def api_setdisplayname():
     """
     Sets the display name for the currently logged in user.
     """
     if (session['uid'] == 0):
-        return 'NO'
-    dname = request.json['dname']
-    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames FROM users WHERE displayname = %s'
-    cursor = db.connection.cursor()
-    cursor.execute(query, (session['uid'], ))
-    results = cursor.fetchall()
-    if len(results) > 0:
         return 'NG'
-    query = 'UPDATE users SET displayname = %s where uid = %s'
-    cursor.execute(query, (dname, session['uid']))
+    dname = request.json['dname']
+    result = setDisplayName(dname, session['uid'])
+    if (result < 1):
+        return 'NG'
     session['displayname'] = dname
-    return 'OK'  # TODO: What if it ISN'T okay?
+    return 'OK'
 
 
 @app.route('/api/v1/songinfo/<sid>', methods=['GET'])
-def getSongInfo(sid):
+def api_songinfo(sid):
     """
     Gets song 'profile' info for a specified song id.
+    Returns songinfo: {artist, title, users[{displayname, username}], plays, recent}
     <sid> - Song ID to get profile page for.
     """
-    query = 'SELECT artists.artist, titles.title FROM songs '
-    query += 'INNER JOIN artists ON artists.aid = songs.aid '
-    query += 'INNER JOIN titles ON titles.tid = songs.tid '
-    query += 'WHERE songs.sid = %s'
-    cursor = db.connection.cursor()
-    cursor.execute(query, (int(sid),))
-    result = cursor.fetchone()
-    # TODO: Handle a 'None' case gracefully
-    # NEXT, we should get a list of users that have this song on their list?
-    query = 'SELECT DISTINCT username, displayname FROM users '
-    query += 'INNER JOIN songlists ON songlists.uid = users.uid '
-    query += 'WHERE songlists.sid = %s AND songlists.public = 1'
-    cursor.execute(query, (int(sid),))
-    result['users'] = cursor.fetchall()
-    # How about a total count of plays?
-    query = 'SELECT SUM(plays) AS totalplays FROM songlists '
-    query += 'WHERE sid = %s'
-    cursor.execute(query, (int(sid),))
-    result['plays'] = int(cursor.fetchone()['totalplays'])
-    # and a most recent play?
-    return jsonify(result)
+    songinfo = getSongArtistTitle(int(sid))
+    songinfo['users'] = getPublicSonglistUsersForSid(int(sid))
+    songInfo['plays'] = getTotalPlaysForSid(int(sid))
+    songInfo['recent'] = getMostRecentPlayForSid(int(sid))
+    return jsonify(songinfo)
 
 
-@app.route('/api/v1/allusers', methods=['GET'])
-def getUsers():
+@app.route('/api/v1/alluserdnames', methods=['GET'])
+def api_alluserdnames():
     """
-    Get a raw list of usernames and uids for populating autocomplete box.
+    Get a raw list of user displaynames for populating autocomplete box.
     """
-    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames FROM users'
-    cursor = db.connection.cursor()
-    cursor.execute(query)
-    result = cursor.fetchall()
+    result = getUserDisplayNames()
     return jsonify(result)
 
 
 @app.route('/api/v1/allartists', methods=['GET'])
-def getArtists():
+def api_allartists():
     """
     Get a raw list of artists and aids for populating autocomplete box.
     """
-    query = 'SELECT artist, aid FROM artists'
-    cursor = db.connection.cursor()
-    cursor.execute(query)
-    result = cursor.fetchall()
+    result = getAllArtists()
     return jsonify(result)
 
 
 @app.route('/api/v1/alltitles', methods=['GET'])
-def getTitles():
+def api_alltitles():
     """
-    Get a raw list of titles for populating autocomplete box.
+    Get a raw list of titles and tids for populating autocomplete box.
     """
-    query = 'SELECT title FROM titles'
-    cursor = db.connection.cursor()
-    cursor.execute(query)
-    result = cursor.fetchall()
+    result = getAllTitles()
     return jsonify(result)
 
 
 @app.route('/api/v1/delsong', methods=['POST'])
-def removeSongFromList():
+def api_delsong():
     """
     Removes a song from a user's songlist.
     'slid' - Songlist entry to delete.
-    TODO: Verify request is coming from owner of the list.
+    Returns 'NG' on an error, 'OK' on a successful delete.
     """
     slid = int(request.json['slid'])
-    cursor = db.connection.cursor()
-    query = 'SELECT uid FROM songlists WHERE slid = %s'
-    cursor.execute(query, (slid,))
-    result = cursor.fetchone()
-    # You can only edit your own songlist
-    if (result['uid'] != session['uid']):
-        return 'Invalid User', 401
-    query = 'DELETE FROM songlists WHERE slid = %s'
-    cursor.execute(query, (slid,))
-    result = cursor.fetchone()
+    uid = session['uid']
+    count = deleteSlidFromSonglist(slid, uid)
+    if (count == 0):
+        return 'NG'
     return 'OK'
 
 
-@app.route('/api/v1/allsongs', methods=['GET'])
-def getAllSongs():
+@app.route('/api/v1/allsonginfos', methods=['GET'])
+def api_allsonginfos():
     """
     Returns a list of all songs (artist, title, sid) for populating the autocomplete.
     """
-    query = 'SELECT artists.artist, titles.title, songs.sid FROM songs '
-    query += 'INNER JOIN artists ON artists.aid = songs.aid '
-    query += 'INNER JOIN titles ON titles.tid = songs.tid'
-    cursor = db.connection.cursor()
-    cursor.execute(query)
-    result = cursor.fetchall()
+    result = getAllArtistsAndTitlesAndSids()
     return jsonify(result)
 
 
 @app.route('/api/v1/setsongpub/<slid>/<pub>', methods=['GET'])
-def setSongPub(slid, pub):
+def api_setsongpug(slid, pub):
     """
     Sets a songlist entry to public or non-public, if the session GUID matches the songlist entry owner.
     <slid> - Songlist entry to update
     <pub> - 1 or 0 (for True or False)
-    NOTE: Fails silently if session UID doesn't match song owner UID.
+    Returns OK if a row was updated, NG if no change was made (ie., UID doesn't match).
     """
-    query = 'UPDATE songlists SET public = %s '
-    query += 'WHERE slid = %s AND uid = %s'
-    cursor = db.connection.cursor()
-    cursor.execute(query, (int(pub), int(slid), session['uid']))
-    result = cursor.fetchall()
-    return jsonify(result)
+    count = setSongPub(int(pub), int(slid), session['uid'])
+    if (count == 1):
+        return 'OK'
+    return 'NG'
 
 
 @app.route('/api/v1/setsongwheel/<slid>/<wheel>', methods=['GET'])
-def setSongWheel(slid, wheel):
+def api_setsongwheel(slid, wheel):
     """
-    Sets a songlist entry to public or non-public, if the session GUID matches the songlist entry owner.
+    Sets a songlist entry to "wheel-able" or not, if the session GUID matches the songlist entry owner.
     <slid> - Songlist entry to update
-    <pub> - 1 or 0 (for True or False)
-    NOTE: Fails silently if session UID doesn't match song owner UID.
+    <wheel> - 1 or 0 (for True or False)
+    Returns OK if a row was updated, NG if no change was made (ie., UID doesn't match).
     """
-    query = 'UPDATE songlists SET wheel = %s '
-    query += 'WHERE slid = %s AND uid = %s'
-    cursor = db.connection.cursor()
-    cursor.execute(query, (int(wheel), int(slid), session['uid']))
-    result = cursor.fetchall()
-    return jsonify(result)
+    count = setSongWheel(int(wheel), int(slid), session['uid'])
+    if (count == 1):
+        return 'OK'
+    return 'NG'

@@ -101,67 +101,10 @@ def getVideoId(link):
     return ''
 
 
-def getReqCount(uid):
-    """
-    Get count of requests for a user
-    """
-    cursor = db.connection.cursor()
-    query = 'SELECT COUNT(*) as count FROM requests '
-    query += 'WHERE uid = %s'
-    cursor.execute(query, (uid,))
-    result = cursor.fetchone()['count']
-    return result
-
-
-def findOrAddSong(artist, title):
-    """
-    Returns a SID for a song, with appropriate artist and title AID and TID values, created new if necessary.
-    <artist>: Name of the artist to find or create the AID for.
-    <title>: Title of the song to find or create the TID for.
-    """
-    aid = -1
-    tid = -1
-    cursor = db.connection.cursor()
-    # Artist ID
-    query = 'SELECT aid FROM artists WHERE artist = %s'
-    cursor.execute(query, (artist,))
-    result = cursor.fetchall()
-    if (len(result) == 0):  # Artist Doesn't exist
-        query = 'INSERT INTO artists (artist) VALUES (%s)'
-        cursor.execute(query, (artist,))
-        db.connection.commit()
-        query = 'SELECT aid FROM artists WHERE artist = %s'
-        cursor.execute(query, (artist,))
-        result = cursor.fetchall()
-    aid = int(result[0]['aid'])
-    # Title ID
-    query = 'SELECT tid FROM titles WHERE title = %s'
-    cursor.execute(query, (title,))
-    result = cursor.fetchall()
-    if (len(result) == 0):  # Title Doesn't exist
-        query = 'INSERT INTO titles (title) VALUES (%s)'
-        db.connection.commit()
-        cursor.execute(query, (title,))
-        query = 'SELECT tid FROM titles WHERE title = %s'
-        cursor.execute(query, (title,))
-        result = cursor.fetchall()
-    tid = int(result[0]['tid'])
-    # Actual Song ID
-    query = 'SELECT sid FROM songs WHERE aid = %s AND tid = %s'
-    cursor.execute(query, (aid, tid,))
-    result = cursor.fetchall()
-    if (len(result) == 0):  # SONG doesn't exist
-        query = 'INSERT INTO songs (aid, tid) VALUES (%s, %s)'
-        cursor.execute(query, (aid, tid))
-        db.connection.commit()
-        query = 'SELECT sid FROM songs WHERE aid = %s AND tid = %s'
-        cursor.execute(query, (aid, tid,))
-        result = cursor.fetchall()
-    return result[0]['sid']
-
 import auth
 import routes
 import api
+from dbutil import *
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')

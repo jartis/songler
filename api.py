@@ -336,8 +336,8 @@ def api_songinfo(sid):
     """
     songinfo = getSongArtistTitle(int(sid))
     songinfo['users'] = getPublicSonglistUsersForSid(int(sid))
-    songInfo['plays'] = getTotalPlaysForSid(int(sid))
-    songInfo['recent'] = getMostRecentPlayForSid(int(sid))
+    songinfo['plays'] = getTotalPlaysForSid(int(sid))
+    songinfo['recent'] = getMostRecentPlayForSid(int(sid))
     return jsonify(songinfo)
 
 

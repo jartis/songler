@@ -1,15 +1,15 @@
-from app import app, db, addNewUser, getVideoId
+from app import app, addNewUser, getVideoId
 import api
 import auth
 import random
 from flask import Flask, url_for, redirect, request, jsonify, render_template, g, session, flash
-from flask_mysqldb import MySQL
 from flask_bcrypt import Bcrypt
 from flask_oauthlib.client import OAuth
 from twitch import *
 from enum import IntEnum
 from urllib.parse import urlparse
 from dbconf import *
+from dbutil import *
 
 
 @app.route('/login')
@@ -54,14 +54,11 @@ def showSongList(user):
     <user> - The *Display Name* for the songlist we want to display.
     """
     user = str(user)
-    cursor = db.connection.cursor()
-    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames FROM users '
-    query += 'WHERE displayname LIKE %s'
-    cursor.execute(query, [user, ])
-    row = cursor.fetchone()
-    if row is not None:
-        uid = int(row['uid'])
-        return render_template('requestlist.jinja', listuid=uid, listuser=row['displayname'])
+    userinfo = getUserByDisplayName(user)
+    if userinfo is not None:
+        uid = int(userinfo['uid'])
+        username = userinfo['displayname']
+        return render_template('requestlist.jinja', listuid=uid, listuser=username)
     else:
         return render_template('error.jinja', error=("No user found with the name " + user))
 
@@ -93,10 +90,7 @@ def renderProfile(user):
     <user> - *Display Name* for the profile page to retrieve.
     """
     user = str(user)
-    cursor = db.connection.cursor()
-    query = 'SELECT uid FROM users WHERE displayname LIKE %s'
-    cursor.execute(query, [user, ])
-    row = cursor.fetchone()
+    row = getUserByDisplayName(user)
     if row is not None:
         uid = int(row['uid'])
         return render_template('profile.jinja', listuid=uid, listuser=user)

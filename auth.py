@@ -1,9 +1,8 @@
-from app import app, db, addNewUser
+from app import app, addNewUser
 import api
 import routes
 import random
 from flask import Flask, url_for, redirect, request, jsonify, render_template, g, session, flash
-from flask_mysqldb import MySQL
 from flask_bcrypt import Bcrypt
 from flask_oauthlib.client import OAuth
 from twitch import *
@@ -12,6 +11,7 @@ from urllib.parse import urlparse
 import json
 from dbconf import *
 import requests
+from dbutil import *
 
 oauth = OAuth()
 bcrypt = Bcrypt(app)
@@ -89,11 +89,11 @@ def savePass():
         return 'NO'  # You can't do this! I forbid it!
     if (request.json['password'] == ''):
         return 'MT'  # You can't do this! I forbid it!
-    cursor = db.connection.cursor()
     pw = bcrypt.generate_password_hash(request.json['password'])
-    query = 'UPDATE users SET password = %s WHERE uid = %s'
-    cursor.execute(query, (pw, session['uid'],))
-    return 'OK'  # Password set successfully
+    result = setUserPassword(session['uid'], pw)
+    if (result == 1):
+        return 'OK'  # Password set successfully
+    return 'NG'  # Something bad happened!
 
 
 @app.route('/authenticate', methods=['POST', ])
@@ -106,10 +106,7 @@ def authenticate():
     """
     username = request.form['username']
     password = request.form['password']
-    cursor = db.connection.cursor()
-    query = 'SELECT username, password, uid, displayname FROM users WHERE username = %s OR email = %s'
-    cursor.execute(query, [username, username, ])
-    user = cursor.fetchone()
+    user = getLoginUser(username)
     if user['password'] == None or user['password'] == '':
         flash('Your account was created by logging in with Twitch. Try logging in there and changing your password in your profile settings, if you wish to log in with a username and password here.')
         return render_template('login.jinja')
@@ -140,7 +137,6 @@ def slauth():
     """
     Callback endpoint for Streamlabs OAuth account linking.
     """
-    cursor = db.connection.cursor()
     code = request.args['code']
     url = "https://streamlabs.com/api/v1.0/token"
     data = {
@@ -164,9 +160,7 @@ def slauth():
         slname = userR['streamlabs']['display_name']
         # Do we ADD the user, or UPDATE them?
         if (session['uid'] == 0):
-            query = 'SELECT * FROM users WHERE sluid = %s'
-            cursor.execute(query, (sluid, ))
-            row = cursor.fetchone()
+            row = getStreamlabsUser(sluid)
             if row is None:
                 uid = addNewUser(username=slname,
                                  password='',
@@ -175,17 +169,14 @@ def slauth():
                                  uid=-1,
                                  sluid=sluid,
                                  slname=slname)
-                query = 'SELECT * FROM users WHERE uid = %s'
-                cursor.execute(query, (uid,))
-                row = cursor.fetchone()
+                row = getUserInfo(uid)
             # Set the session whatsits and let's rock!
             session['uid'] = row['uid']
             session['loggedIn'] = True
             session['username'] = row['username']
             session['displayname'] = row['displayname']
         else:
-            query = 'UPDATE users SET sluid = %s, slname = %s WHERE uid = %s'
-            cursor.execute(query, (sluid, slname, session['uid']))
+            setSLUIDForUser(sluid, slname, session['uid'])
         return redirect(url_for('editProfile'))
 
 
@@ -201,16 +192,12 @@ def twitchlink():
 def twitchunlink():
     """
     Endpoint for unlinking your Twitch account from existing account
-    # NOTE: You need to enforce setting a password here!
     """
-    cursor = db.connection.cursor()
-    query = 'SELECT password FROM users WHERE uid = %s'
-    cursor.execute(query, (session['uid'],))
-    pw = cursor.fetchone()['password']
+    pw = getPasswordForUser(session['uid'])
     if (pw == ''):
         return render_template('error.jinja', error=('You must set a password for your account first'))
-    query = 'UPDATE users SET tuid = 0, tname = "" WHERE uid = %s'
-    cursor.execute(query, (session['uid'],))
+    unlinkTwitch(session['uid'])
+    # TODO: Handle errors on unlinking
     session['tuid'] = 0
     session['tname'] = ''
     return redirect(url_for('editProfile'))
@@ -220,16 +207,11 @@ def twitchunlink():
 def slunlink():
     """
     Endpoint for unlinking your Streamlabs account from existing account
-    # NOTE: You need to enforce setting a password here!
     """
-    cursor = db.connection.cursor()
-    query = 'SELECT password FROM users WHERE uid = %s'
-    cursor.execute(query, (session['uid'],))
-    pw = cursor.fetchone()['password']
+    pw = getPasswordForUser(session['uid'])
     if (pw == ''):
         return render_template('error.jinja', error=('You must set a password for your account first'))
-    query = 'UPDATE users SET tuid = 0, tname = "" WHERE uid = %s'
-    cursor.execute(query, (session['uid'],))
+    unlinkStreamlabs(session['uid'])
     session['sluid'] = 0
     session['slname'] = ''
     return redirect(url_for('editProfile'))
@@ -252,19 +234,17 @@ def tlinkok():
     twitchuid = twitchuser[0]['id']
     tname = twitchuser[0]['display_name']
     # Set the current user's tuid
-    cursor = db.connection.cursor()
-    query = 'UPDATE users SET tuid = %s, tname = %s WHERE uid = %s'
-    cursor.execute(query, [twitchuid, tname, session['uid']])
-    query = 'SELECT * FROM users WHERE uid = %s'
-    cursor.execute(query, (session['uid'],))
-    row = cursor.fetchone()
-    session['uid'] = row['uid']
-    session['loggedIn'] = True
-    session['username'] = row['username']
-    session['displayname'] = row['displayname']
-    session['tuid'] = twitchuid
-    session['tname'] = tname
-    return redirect(url_for('editProfile'))
+    res = setTUIDForUser(twitchuid, tname, session['uid'])
+    if (res == 1):
+        row = getUserInfo(session['uid'])
+        session['uid'] = row['uid']
+        session['loggedIn'] = True
+        session['username'] = row['username']
+        session['displayname'] = row['displayname']
+        session['tuid'] = twitchuid
+        session['tname'] = tname
+        return redirect(url_for('editProfile'))
+    return render_template('error.jinja', error=('Error linking account: ' + request.args['error'] + ' - ' + request.args['error_description']))
 
 
 @app.route('/tlogin')
@@ -291,10 +271,7 @@ def authorized():
     twitchuid = twitchuser[0]['id']
     email = twitchuser[0]['email']
     # Okay, if this user doesn't exist in our database yet, let's add them!
-    cursor = db.connection.cursor()
-    query = 'SELECT * FROM users WHERE tuid = %s'
-    cursor.execute(query, [twitchuid, ])
-    row = cursor.fetchone()
+    row = getTwitchUser(twitchuid)
     if row is None:
         uid = addNewUser(username=username,
                          password='',
@@ -303,9 +280,7 @@ def authorized():
                          uid=-1,
                          tuid=twitchuid,
                          tname=username)
-        query = 'SELECT * FROM users WHERE uid = %s'
-        cursor.execute(query, (uid,))
-        row = cursor.fetchone()
+        row = getUserInfo(session['uid'])
     # Set the session whatsits and let's rock!
     session['uid'] = row['uid']
     session['loggedIn'] = True

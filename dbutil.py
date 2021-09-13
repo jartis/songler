@@ -141,8 +141,10 @@ def getMostRecentPlayForSid(sid):
     query = 'SELECT timestamp FROM plays '
     query += 'WHERE sid = %s ORDER BY timestamp DESC'
     cursor.execute(query, (int(sid),))
-    result = int(cursor.fetchone()['timestamp'])
-    return result
+    row = cursor.fetchone()
+    if (row is None):
+        return None
+    return row['timestamp']
 
 
 def setDisplayName(dname, uid):
@@ -430,7 +432,7 @@ def getUserSongs(uid, pub):
     <pub> - True or False for "Only get public visible songs"
     """
     cursor = db.connection.cursor()
-    query =  'SELECT songlists.slid, artists.artist, titles.title, songlists.public, '
+    query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.public, '
     query += 'songlists.uid, songlists.wheel, COUNT(plays.pid) as plays, '
     query += 'MAX(plays.timestamp) as lastplayed FROM songlists '
     query += 'INNER JOIN songs ON songs.sid = songlists.sid '
@@ -460,7 +462,7 @@ def getSlidFromRid(rid):
     return int(result['slid'])
 
 
-def playSong(slid, date = ''):
+def playSong(slid, date=''):
     """
     Add a "play" for a songlist ID
     <slid> - Songlist entry to update
@@ -555,6 +557,7 @@ def getRefillSongs(uid, nolist):
     result = cursor.fetchall()
     return result
 
+
 def getUidFromTName(tname):
     """
     Gets a UID given a twitch username.
@@ -568,6 +571,7 @@ def getUidFromTName(tname):
     if (len(results) == 0):
         return -1
     return results[0]['uid']
+
 
 def getLastRequestInChannel(ruid, uid):
     """
@@ -583,3 +587,132 @@ def getLastRequestInChannel(ruid, uid):
     if (rres is None):
         return -1
     return rres['rid']
+
+
+def getUserByDisplayName(user):
+    """
+    Gets a uid and displayname from a given username
+    <user> - DisplayName to match
+    """
+    cursor = db.connection.cursor()
+    query = 'SELECT uid, displayname FROM users '
+    query += 'WHERE displayname LIKE %s'
+    cursor.execute(query, [user, ])
+    row = cursor.fetchone()
+    return row
+
+
+def setUserPassword(uid, pw):
+    """
+    Sets a given user's password.
+    <uid> - User to update
+    <pw> - Password (hashed!) to set.
+    Returns number of affected users. One or zero, hopefully!
+    """
+    cursor = db.connection.cursor()
+    query = 'UPDATE users SET password = %s WHERE uid = %s'
+    cursor.execute(query, (pw, uid,))
+    return cursor.rowcount
+
+
+def getLoginUser(username):
+    """
+    Gets a user's login info given a UN and a password.
+    <username> - Username (not displayname) **OR** email
+    <password> - PW hash to match
+    Returns the matching user or None
+    """
+    cursor = db.connection.cursor()
+    query = 'SELECT username, password, uid, displayname FROM users WHERE username = %s OR email = %s'
+    cursor.execute(query, [username, username, ])
+    user = cursor.fetchone()
+    return user
+
+
+def getStreamlabsUser(sluid):
+    """
+    Gets a user's userinfo given a StreamLabs UID
+    <sluid> - StreamLabs ID to find a match for
+    Returns a user object, or None
+    """
+    cursor = db.connection.cursor()
+    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames '
+    query += 'FROM users WHERE sluid = %s'
+    cursor.execute(query, (sluid, ))
+    row = cursor.fetchone()
+    return row
+
+def getTwitchUser(tuid):
+    """
+    Gets a user's userinfo given a Twitch UID
+    <tuid> - Twitch ID to find a match for
+    Returns a user object, or None
+    """
+    cursor = db.connection.cursor()
+    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames '
+    query += 'FROM users WHERE tuid = %s'
+    cursor.execute(query, (tuid, ))
+    row = cursor.fetchone()
+    return row
+
+
+def setSLUIDForUser(sluid, slname, uid):
+    """
+    Sets a StreamLabs ID for a given UID.
+    <sluid> - StreamLabs ID to link to the user
+    <slname> - StreamLabs displayname to link to the user
+    <uid> - Local user to update
+    Returns the number of changed rows (one or zero!)
+    """
+    cursor = db.connection.cursor()
+    query = 'UPDATE users SET sluid = %s, slname = %s WHERE uid = %s'
+    cursor.execute(query, (sluid, slname, uid))
+    return cursor.rowcount
+
+def setTUIDForUser(tuid, tname, uid):
+    """
+    Sets a Twitch ID for a given UID.
+    <tuid> - Twitch ID to link to the user
+    <tname> - Twitch displayname to link to the user
+    <uid> - Local user to update
+    Returns the number of changed rows (one or zero!)
+    """
+    cursor = db.connection.cursor()
+    query = 'UPDATE users SET tuid = %s, tname = %s WHERE uid = %s'
+    cursor.execute(query, (tuid, tname, uid))
+    return cursor.rowcount
+
+
+
+
+def getPasswordForUser(uid):
+    """
+    Returns the password hash for a user.
+    <uid> - Local user to pull the password for.
+    """
+    cursor = db.connection.cursor()
+    query = 'SELECT password FROM users WHERE uid = %s'
+    cursor.execute(query, (uid,))
+    pw = cursor.fetchone()['password']
+    return pw
+
+
+def unlinkTwitch(uid):
+    """
+    Unlink a twitch account from a local account
+    <uid> - local account to unlink
+    """
+    cursor = db.connection.cursor()
+    query = 'UPDATE users SET tuid = 0, tname = "" WHERE uid = %s'
+    cursor.execute(query, (uid,))
+    return cursor.rowcount
+
+def unlinkStreamlabs(uid):
+    """
+    Unlink a Streamlabs account from a local account
+    <uid> - local account to unlink
+    """
+    cursor = db.connection.cursor()
+    query = 'UPDATE users SET sluid = 0, slname = "" WHERE uid = %s'
+    cursor.execute(query, (uid,))
+    return cursor.rowcount

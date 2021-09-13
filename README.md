@@ -36,6 +36,7 @@ API Endpoints and sample commands:
 * How to handle multiple requests for same slid (priority? Hotlist?)
 * "Hotlist" overlay - Chime for aging requests?
 * Fix local dates/times in DB for plays table
+* Make Mobile Friendly
 
 ### Wheel Overlay
 
@@ -62,8 +63,6 @@ API Endpoints and sample commands:
 
 ### Song List Management
 
-* Error handling for adding song if the server catches fire
-* Add most recent 'Last Played' to song info page
 * `Enter` to save song in song adding modal
 * Add moderator abilities (user XX can mod my stream)
 
@@ -82,8 +81,6 @@ API Endpoints and sample commands:
 * Document the wheel features a little better...
 * Clean up all string interpolation
 * Consistent styling / table generation across pages
-* Move all DB functionality out of Auth
-* Move all DB functionality out of Rendering (if any)
 
 ### Nightbot Integration
 
@@ -94,6 +91,10 @@ API Endpoints and sample commands:
 
 ## Done
 
+* ~~Add most recent 'Last Played' to song info page~~
+* ~~Error handling for adding song if the server catches fire~~
+* ~~Move all DB functionality out of Auth~~
+* ~~Move all DB functionality out of Rendering (if any)~~
 * ~~Move all DB functionality out of Nightbot~~
 * ~~Change last played date and play count from song management page~~
 * ~~Move all DB functionality into a separate file from API~~

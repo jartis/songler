@@ -106,15 +106,15 @@ function setShowReqNames() {
             } else if (msg.responseText == 'N') {
                 makeToast(SUCCESS, '✔️ Success', 'Your overlays will hide requester names.');
             } else {
-                makeToast(ERROR, '⚠️ Error', 'Your overlays will do whatever they feel like.');
+                makeToast(ERROR, '⚠️ Error', 'Error setting "Show Requester Names" option.');
             }
         }
     });
 }
 
 function setAnon() {
-    let doShow = {
-        show: (document.getElementById('anon').checked ? 1 : 0),
+    let doAnon = {
+        anon: (document.getElementById('anon').checked ? 1 : 0),
     };
     $.ajax({
         type: 'POST',
@@ -123,12 +123,12 @@ function setAnon() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         complete: function(msg) {
-            if (msg.responseText == 'Y') {
+            if (msg.responseText == '1') {
                 makeToast(SUCCESS, '✔️ Success', 'Anonymous requests are enabled.');
-            } else if (msg.responseText == 'N') {
+            } else if (msg.responseText == '0') {
                 makeToast(SUCCESS, '✔️ Success', 'Anonymous requests are disabled.');
             } else {
-                makeToast(ERROR, '⚠️ Error', 'Anonymous requests are...?');
+                makeToast(ERROR, '⚠️ Error', 'Error setting "Anonymous Request" option.');
             }
         }
     });
@@ -140,7 +140,7 @@ function setDisplayName() {
     };
     $.ajax({
         type: 'POST',
-        url: APIURL + '/setname',
+        url: APIURL + '/setdisplayname',
         data: JSON.stringify(dName),
         contentType: "application/json; charset=utf-8",
         dataType: "json",

@@ -156,6 +156,7 @@ function writeSongList() {
         tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-secondary" data-artist="' + song.artist + '" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="queueSong(this, -1)">🚽 Q Low</button>';
         tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-primary" data-artist="' + song.artist + '" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="queueSong(this, 0)">📝 Q Regular</button>';
         tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-warning" data-artist="' + song.artist + '" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="queueSong(this, 1)">👑 Q Priority</button>';
+        tblHtml += '<button style="margin: 2%;" class="btn btn-sm btn-info" data-artist="' + song.artist + '" data-title="' + song.title + '" data-id="' + song.slid + '" onclick="addPlay(this)">📅 Add Played Date</button>';
         tblHtml += '</td></tr>';
     }
     tblHtml += '<td colspan=7 class="text-center">';
@@ -241,7 +242,7 @@ function deleteSong(e) {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         complete: function (msg) {
-            if (msg.status == 200) {
+            if (msg.responseText == 'OK') {
                 makeToast(SUCCESS, '❌ Success', `${title} has been removed from your list.`);
                 loadList();
             } else {
@@ -261,11 +262,9 @@ function queueSong(e, prio = 0) {
             makeToast(SUCCESS, '✔️ Success', `${title} by ${artist} added to your ${prio != 0 ? ((prio < 0) ? 'low-prio ' : 'priority ') : ''}queue`);
             updateReqBadge();
         } else if (this.responseText == 'QF') {
-            // FIXME
-            // makeToast(SUCCESS, '✔️ Success', `${title} by ${artist} added to your queue`);
-        } else if (this.responseText == 'NS') {
-            // FIXME
-            // makeToast(SUCCESS, '✔️ Success', `${title} by ${artist} added to your queue`);
+            makeToast(ERROR, '🙃 PROBLEMS!', `Could not add song to your own queue?!?`);
+        } else if (this.responseText == 'NG') {
+            makeToast(ERROR, '🙃 PROBLEMS!', `Something went excitingly wrongful!`);
         }
     };
     req.open('GET', APIURL + '/addreq/' + slid + (prio ? `?p=${prio}` : ''));
@@ -313,6 +312,33 @@ function saveSong(e) {
 
 function addSong(e) {
     $('#addSongModal').modal('show');
+}
+
+function addPlay(e) {
+    $('#addPlayModal').modal('show');
+    document.getElementById('playslid').value = e.getAttribute('data-id');
+}
+
+function savePlay(e) {
+    let slid = document.getElementById('playslid').value;
+    let playdate = document.getElementById('addplaydate').value;
+    $.ajax({
+        type: 'GET',
+        url: `${APIURL}/playslid/${slid}?date=${playdate}`,
+        complete: function (msg) {
+            if (msg.responseText == 'NG') {
+                makeToast(ERROR, '⚠️ Error', `Something Didn't.`);
+                $('#addPlayModal').modal('hide');
+            } else if (msg.responseText == 'OK') {
+                makeToast(SUCCESS, '✔️ Success', `Your playdate has been added`);
+                $('#addPlayModal').modal('hide');
+                loadList();
+            } else {
+                makeToast(ERROR, '⚠️ Error', 'Something weird happened...');
+                $('#addSongModal').modal('hide');
+            }
+        }
+    });
 }
 
 function makeSongBoxesAutoComplete() {

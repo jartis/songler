@@ -128,6 +128,7 @@ function playReq(e) {
     req.onload = function () {
         const rmreq = new XMLHttpRequest();
         rmreq.onload = function () {
+            // TODO: Handle OK / NG
             makeToast(SUCCESS, '✔️ Success', title + ' has been marked as played.');
             loadReqList();
             updateReqBadge();
@@ -135,6 +136,6 @@ function playReq(e) {
         rmreq.open('GET', APIURL + '/removereq/' + rid);
         rmreq.send();
     };
-    req.open('GET', APIURL + '/play/' + rid);
+    req.open('GET', APIURL + '/playreq/' + rid);
     req.send();
 }

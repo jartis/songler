@@ -14,7 +14,7 @@ def setSongWheel(wheel, slid, uid):
     return cursor.rowcount
 
 
-def setSongWheel(pub, slid, uid):
+def setSongPub(pub, slid, uid):
     """
     Sets the 'public' column to true or false for the given songlist ID.
     <pub> - True or False for the 'show on public list' value
@@ -321,6 +321,7 @@ def addSongToSonglist(uid, sid, ytid, pub, wheel):
     <wheel> - Whether the song is marked 'random-wheel-able' or not
     Returns count of modified rows - 1 if it was inserted, 0 if something went wrong
     """
+    cursor = db.connection.cursor()
     query = 'INSERT INTO songlists (uid, sid, public, ytid, wheel) VALUES (%s, %s, %s, %s, %s)'
     cursor.execute(query, (uid, sid, pub, ytid, wheel))
     return cursor.rowcount
@@ -368,6 +369,7 @@ def addRequest(ruid, rname, prio, slid):
     <slid> - Songlist ID to add a request for
     Returns count of added rows - 0 for no matches, 1 for success
     """
+    cursor = db.connection.cursor()
     query = 'INSERT INTO requests (uid, ruid, slid, timestamp, rname, prio) '
     query += 'SELECT uid, %s, slid, NOW(), %s, %s FROM songlists '
     query += 'WHERE slid = %s'
@@ -642,6 +644,7 @@ def getStreamlabsUser(sluid):
     row = cursor.fetchone()
     return row
 
+
 def getTwitchUser(tuid):
     """
     Gets a user's userinfo given a Twitch UID
@@ -669,6 +672,7 @@ def setSLUIDForUser(sluid, slname, uid):
     cursor.execute(query, (sluid, slname, uid))
     return cursor.rowcount
 
+
 def setTUIDForUser(tuid, tname, uid):
     """
     Sets a Twitch ID for a given UID.
@@ -681,8 +685,6 @@ def setTUIDForUser(tuid, tname, uid):
     query = 'UPDATE users SET tuid = %s, tname = %s WHERE uid = %s'
     cursor.execute(query, (tuid, tname, uid))
     return cursor.rowcount
-
-
 
 
 def getPasswordForUser(uid):
@@ -706,6 +708,7 @@ def unlinkTwitch(uid):
     query = 'UPDATE users SET tuid = 0, tname = "" WHERE uid = %s'
     cursor.execute(query, (uid,))
     return cursor.rowcount
+
 
 def unlinkStreamlabs(uid):
     """

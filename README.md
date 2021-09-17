@@ -65,6 +65,9 @@ API Endpoints and sample commands:
 
 * `Enter` to save song in song adding modal
 * Add moderator abilities (user XX can mod my stream)
+* Add multiple play dates for updating songs
+* 'Add Song' toast not auto-closing iff another toast happens
+* Show song title in "add play" modal
 
 ### User Management / Viewing
 

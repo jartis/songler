@@ -4,14 +4,8 @@ from flask_mysqldb import MySQL
 from flask_bcrypt import Bcrypt
 from flask_oauthlib.client import OAuth
 from twitch import *
-from enum import IntEnum
 from urllib.parse import urlparse
 from dbconf import *
-
-
-class authProvider(IntEnum):
-    TWITCH = 1
-
 
 app = Flask(
     __name__,

@@ -63,7 +63,7 @@ def api_checkemail(email):
 
 @app.route('/api/v1/allsongs', methods=['GET'])
 @app.route('/api/v1/allsongs/<uid>', methods=['GET'])
-def api_allsongs(uid = -1):
+def api_allsongs(uid=-1):
     """
     Gets all songs for the currently logged in user.
     Sorts by least played, then least recently played.

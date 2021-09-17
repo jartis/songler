@@ -21,6 +21,9 @@ COPY api.py .
 COPY routes.py .
 COPY serve.py .
 COPY dbconf.py .
+COPY dbutil.py .
+COPY yt.py .
+COPY nightbot.py .
 COPY templates ./templates/
 COPY static ./static/
 

@@ -227,6 +227,7 @@ def getSongsForArtist(aid):
     <aid> - Artist ID to get the songs for
     Returns a list of {title, sid}
     """
+    cursor = db.connection.cursor()
     query = 'SELECT titles.title, songs.sid FROM songs '
     query += 'INNER JOIN titles ON songs.tid = titles.tid '
     query += 'WHERE songs.aid = %s'
@@ -241,6 +242,7 @@ def getUsersForArtist(aid):
     <aid> - Artist to match across songlists.
     Returns a list of {displayname}s
     """
+    cursor = db.connection.cursor()
     query = 'SELECT DISTINCT displayname FROM users '
     query += 'INNER JOIN songlists ON songlists.uid = users.uid '
     query += 'INNER JOIN songs ON songlists.sid = songs.sid '

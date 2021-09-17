@@ -68,6 +68,7 @@ API Endpoints and sample commands:
 * Add multiple play dates for updating songs
 * 'Add Song' toast not auto-closing iff another toast happens
 * Show song title in "add play" modal
+* Fix adding YT links to songs / add YT link display
 
 ### User Management / Viewing
 

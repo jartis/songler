@@ -1,5 +1,6 @@
 import os
 
+
 dbhost = os.environ.get('DBHOST')
 dbport = int(os.environ.get('DBPORT'))
 dbuser = os.environ.get('DBUSER')
@@ -10,3 +11,5 @@ twitchClientId = os.environ.get('TWITCHCLIENTID')
 twitchSecret = os.environ.get('TWITCHSECRET')
 slClientId = os.environ.get('SLCLIENTID')
 slSecret = os.environ.get('SLSECRET')
+scheme = os.environ.get('SCHEME')
+

@@ -1,4 +1,51 @@
-from app import db
+from conf import *
+import mysql.connector as mysql
+
+def getConnection():
+    try:
+        cnx = mysql.connect(host=dbhost, port=dbport, user=dbuser,
+                            password=dbpass, database=dbname)
+    except connector.Error as err:
+        if err.errno == connector.errorcode.ER_ACCESS_DENIED_ERROR:
+            print("Something is wrong with your user name or password")
+        elif err.errno == errorcode.ER_BAD_DV_ERROR:
+            print("Database does not exist")
+        else:
+            print(err)
+    # the else will happen if there was no error!
+    else:
+        return cnx
+    return cnx
+
+
+def addNewUser(username, password, email, displayname, uid=-1, tuid='', tname='', sluid='', slname=''):
+    """
+    Adds a new user entry to the database.
+    <username>: Desired username for new account.
+    <password>: Password for new account. Blank if created with an OAuth provider.
+    <email>: Email account to attach to new user. Populated from OAuth provider if possible.
+    <uid>: Defaults to -1. If provided, sets UID in DB, if -1, use the Auto-Increment.
+    <tuid>: Twitch UID, if account was created with Twitch OAuth.
+    """
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
+    if tuid != '':
+        # Create a Twitch-based user
+        query = 'INSERT INTO users (username, password, email, tuid, tname, signup, displayname) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, %s)'
+        cursor.execute(query, (username, password,
+                       email, tuid, tname, username))
+    elif sluid != '':
+        query = 'INSERT INTO users (username, password, email, sluid, slname, signup, displayname) VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, %s)'
+        cursor.execute(query, (username, password,
+                       email, sluid, slname, username))
+    else:
+        # Create a Username/Password user
+        query = 'INSERT INTO users (username, password, email, signup, displayname) VALUES (%s, %s, %s, CURRENT_TIMESTAMP, %s)'
+        cursor.execute(query, (username, password, email, displayname))
+    query = 'SELECT uid FROM users WHERE username LIKE %s'
+    cursor.execute(query, (username,))
+    row = cursor.fetchone()
+    return int(row['uid'])
 
 
 def setSongWheel(wheel, slid, uid):
@@ -8,7 +55,8 @@ def setSongWheel(wheel, slid, uid):
     <slid> - Songlist ID 
     <uid> - UID making the change. If this doesn't match the SLID owner, don't change. 
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'UPDATE songlists SET wheel = %s WHERE slid = %s AND uid = %s'
     cursor.execute(query, (wheel, slid, uid,))
     return cursor.rowcount
@@ -21,7 +69,8 @@ def setSongPub(pub, slid, uid):
     <slid> - Songlist ID 
     <uid> - UID making the change. If this doesn't match the SLID owner, don't change. 
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'UPDATE songlists SET public = %s WHERE slid = %s AND uid = %s'
     cursor.execute(query, (pub, slid, uid,))
     return cursor.rowcount
@@ -31,7 +80,8 @@ def getAllArtistsAndTitlesAndSids():
     """
     Gets a JSON array of all {artist, title, sid} in songs.
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT artists.artist, titles.title, songs.sid FROM songs '
     query += 'INNER JOIN artists ON artists.aid = songs.aid '
     query += 'INNER JOIN titles ON titles.tid = songs.tid'
@@ -47,7 +97,8 @@ def deleteSlidFromSonglist(slid, uid):
     <uid> - The user ID making the request. You can only remove your own songs.
     Returns number of affected rows - 0 for no match, 1 for success.
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'DELETE FROM songlists WHERE slid = %s AND uid = %s'
     cursor.execute(query, (slid, uid,))
     return cursor.rowcount
@@ -57,7 +108,8 @@ def getAllTitles():
     """
     Get a raw list of titles and tids for populating autocomplete box.
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT title, tid FROM titles'
     cursor.execute(query)
     result = cursor.fetchall()
@@ -69,7 +121,8 @@ def getAllArtists():
     Get a raw list of artists and aids for populating autocomplete box.
     """
     query = 'SELECT artist, aid FROM artists'
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     cursor.execute(query)
     result = cursor.fetchall()
     return result
@@ -80,7 +133,8 @@ def getUserDisplayNames():
     Get a raw list of user displaynames for populating autocomplete box.
     """
     query = 'SELECT displayname FROM users'
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     cursor.execute(query)
     result = cursor.fetchall()
     return result
@@ -92,7 +146,8 @@ def getSongArtistTitle(sid):
         # TODO: Handle a 'None' case gracefully
 
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT artists.artist, titles.title FROM songs '
     query += 'INNER JOIN artists ON artists.aid = songs.aid '
     query += 'INNER JOIN titles ON titles.tid = songs.tid '
@@ -108,7 +163,8 @@ def getPublicSonglistUsersForSid(sid):
     public on their songlist.
     <sid> - The sid to find across songlists
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT DISTINCT username, displayname FROM users '
     query += 'INNER JOIN songlists ON songlists.uid = users.uid '
     query += 'WHERE songlists.sid = %s AND songlists.public = 1'
@@ -123,7 +179,8 @@ def getTotalPlaysForSid(sid):
     Returns just the count as an int.
     <sid> - The sid we want a play count for
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT COUNT(*) AS totalplays FROM plays '
     query += 'WHERE sid = %s'
     cursor.execute(query, (int(sid),))
@@ -137,7 +194,8 @@ def getMostRecentPlayForSid(sid):
     Returns just the timestamp as an int.
     <sid> - The sid we want the most recent play for
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT timestamp FROM plays '
     query += 'WHERE sid = %s ORDER BY timestamp DESC'
     cursor.execute(query, (int(sid),))
@@ -154,7 +212,8 @@ def setDisplayName(dname, uid):
     <uid> - UID to update the displayname
     Returns number of rows updated - 0 for no matching UID / error
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'UPDATE users SET displayname = %s where uid = %s'
     cursor.execute(query, (dname, uid,))
     return cursor.rowcount
@@ -165,7 +224,8 @@ def getAnon(uid):
     Returns the "Allow anonymous requests" config value for the specified user.
     <uid> - User to get the Anon flag for
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT anon FROM users WHERE uid = %s'
     cursor.execute(query, (uid,))
     result = cursor.fetchone()
@@ -178,7 +238,8 @@ def setAnon(uid, anon):
     <uid> - User to set the Anon flag for
     <anon> - Value to set the Anon flag
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'UPDATE users SET anon = %s WHERE uid = %s'
     cursor.execute(query, (anon, uid,))
     return cursor.rowcount
@@ -189,7 +250,8 @@ def getShowNames(uid):
     Returns the "Show Requester Names" config value for the specified user.
     <uid> - User to get the ShowNames flag for
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT showreqnames FROM users WHERE uid = %s'
     cursor.execute(query, (uid,))
     result = cursor.fetchone()
@@ -202,7 +264,8 @@ def setShowNames(uid, show):
     <uid> - User to set the ShowNames flag for
     <show> - Value to set the ShowNames flag
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'UPDATE users SET showreqnames = %s WHERE uid = %s'
     cursor.execute(query, (show, uid,))
     return cursor.rowcount
@@ -213,7 +276,8 @@ def getArtistInfo(aid):
     Gets {artist} name for a specific aid.
     <aid> - Artist ID to get the name for.
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT artist FROM artists '
     query += 'WHERE artists.aid = %s'
     cursor.execute(query, (aid,))
@@ -227,7 +291,8 @@ def getSongsForArtist(aid):
     <aid> - Artist ID to get the songs for
     Returns a list of {title, sid}
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT titles.title, songs.sid FROM songs '
     query += 'INNER JOIN titles ON songs.tid = titles.tid '
     query += 'WHERE songs.aid = %s'
@@ -242,7 +307,8 @@ def getUsersForArtist(aid):
     <aid> - Artist to match across songlists.
     Returns a list of {displayname}s
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT DISTINCT displayname FROM users '
     query += 'INNER JOIN songlists ON songlists.uid = users.uid '
     query += 'INNER JOIN songs ON songlists.sid = songs.sid '
@@ -260,7 +326,8 @@ def findOrAddSong(artist, title):
     """
     aid = -1
     tid = -1
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     # Artist ID
     query = 'SELECT aid FROM artists WHERE artist = %s'
     cursor.execute(query, (artist,))
@@ -306,7 +373,8 @@ def findSongOnUserSonglist(sid, uid):
     <uid> - User ID for the list to search
     Returns the count of entries matching the sid on the user's list.
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT COUNT(*) as count FROM songlists WHERE uid = %s AND sid = %s'
     cursor.execute(query, (uid, sid,))
     result = cursor.fetchone()['count']
@@ -323,7 +391,8 @@ def addSongToSonglist(uid, sid, ytid, pub, wheel):
     <wheel> - Whether the song is marked 'random-wheel-able' or not
     Returns count of modified rows - 1 if it was inserted, 0 if something went wrong
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'INSERT INTO songlists (uid, sid, public, ytid, wheel) VALUES (%s, %s, %s, %s, %s)'
     cursor.execute(query, (uid, sid, pub, ytid, wheel))
     return cursor.rowcount
@@ -336,7 +405,8 @@ def removeRequest(rid, uid):
     <uid> - The CALLING USER's userid.
     Note: You can only delete a request FOR, or FROM, the specified UID.
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'DELETE FROM requests WHERE rid = %s '
     query += 'AND (ruid = %s OR uid = %s)'
     cursor.execute(query, (rid, uid, uid,))
@@ -349,7 +419,8 @@ def canMakeRequest(ruid, slid):
     <ruid> - Requesting user's UID
     <slid> - Songlist ID being requested
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     if (ruid > 0):
         query = 'SELECT rid, uid FROM requests WHERE ruid = %s AND uid IN '
         query += '(SELECT uid FROM songlists WHERE slid = %s)'
@@ -358,8 +429,14 @@ def canMakeRequest(ruid, slid):
         if (len(result) > 0):
             if int(result[0]['uid']) != int(ruid):
                 # Only bail out if the song owner isn't the one requesting. You can fill your own queue.
-                return False
-    return True
+                return 'U' # 'U'ser has a request in the queue already
+    query = 'SELECT rid FROM requests WHERE slid = %s AND uid IN '
+    query += '(SELECT uid FROM songlists WHERE slid = %s)'
+    cursor.execute(query, (slid, slid,))
+    result = cursor.fetchall()
+    if (len(result) > 0):
+            return 'S' # 'S'ong in queue already
+    return 'K'
 
 
 def addRequest(ruid, rname, prio, slid):
@@ -371,7 +448,8 @@ def addRequest(ruid, rname, prio, slid):
     <slid> - Songlist ID to add a request for
     Returns count of added rows - 0 for no matches, 1 for success
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'INSERT INTO requests (uid, ruid, slid, timestamp, rname, prio) '
     query += 'SELECT uid, %s, slid, NOW(), %s, %s FROM songlists '
     query += 'WHERE slid = %s'
@@ -384,7 +462,8 @@ def getRequests(uid, limit):
     Gets all the current requests for the specified user
     <uid> - User to grab requests for
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT requests.rid, requests.slid, requests.rname, artists.artist, titles.title, '
     query += 'requests.prio, requests.timestamp FROM requests '
     query += 'INNER JOIN songlists ON requests.uid = songlists.uid '
@@ -406,7 +485,8 @@ def getReqCount(uid):
     Get count of requests for the specified user.
     <uid> - User to get the current request count for.
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT COUNT(*) as count FROM requests '
     query += 'WHERE uid = %s'
     cursor.execute(query, (uid,))
@@ -420,7 +500,8 @@ def getUserInfo(uid):
     tname, sluid, slname, anon, showreqnames} info for the specified user.
     <uid> - The user ID to pull the userinfo for
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames '
     query += 'FROM users WHERE uid = %s'
     cursor.execute(query, (uid,))
@@ -435,7 +516,8 @@ def getUserSongs(uid, pub):
     <uid> - The user ID to match for the songlist
     <pub> - True or False for "Only get public visible songs"
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.public, '
     query += 'songlists.uid, songlists.wheel, COUNT(plays.pid) as plays, '
     query += 'MAX(plays.timestamp) as lastplayed FROM songlists '
@@ -459,7 +541,8 @@ def getSlidFromRid(rid):
     <rid> - Request to pull the SLID from
     """
     rid = int(rid)
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT slid FROM requests WHERE requests.rid = %s'
     cursor.execute(query, (rid,))
     result = cursor.fetchone()
@@ -471,7 +554,8 @@ def playSong(slid, date=''):
     Add a "play" for a songlist ID
     <slid> - Songlist entry to update
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'INSERT INTO plays (slid, timestamp, sid) '
     query += 'VALUES (%s, '
     if (date != ''):
@@ -488,7 +572,8 @@ def emailInUse(email):
     Returns 1 if the email exists in the user table, 0 if not.
     """
     email = str(email).replace('%', r'\%').replace('_', r'\_')
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT uid FROM users WHERE email LIKE %s'
     cursor.execute(query, [email, ])
     row = cursor.fetchone()
@@ -502,7 +587,8 @@ def usernameInUser(username):
     Returns 1 if the username exists in the user table, 0 if not.
     """
     user = str(user).replace('%', r'\%').replace('_', r'\_')
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT uid FROM users WHERE username LIKE %s'
     cursor.execute(query, (user, ))
     row = cursor.fetchone()
@@ -516,7 +602,8 @@ def getOverlayConfig(uid):
     Pulls the overlay configuration for the specified UserID
     <uid> - User to get the config for
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT * FROM overlays WHERE uid = %s'
     cursor.execute(query, (uid,))
     row = cursor.fetchall()
@@ -531,7 +618,8 @@ def saveOverlayConfig(uid, config):
     <uid> - User to save the config for
     <config> - Big ol gross blob of JSON holding a wheel configuration
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT * FROM overlays WHERE uid = %s'
     cursor.execute(query, (uid,))
     result = cursor.rowcount
@@ -549,7 +637,8 @@ def getRefillSongs(uid, nolist):
     <uid> - User to pull songlist items from
     <nolist> - A list of SLIDs to exclude
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     # NOTE: Get a whole wheel's worth just in case, but only return the top $count
     query = 'SELECT songlists.slid, artists.artist, titles.title, songlists.uid '
     query += 'FROM songlists INNER JOIN songs ON songs.sid = songlists.sid '
@@ -568,7 +657,8 @@ def getUidFromTName(tname):
     <tname> - Twitch username to match
     Returns -1 on no match
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT uid FROM users WHERE tname = %s'
     cursor.execute(query, (channelName,))
     results = cursor.fetchall()
@@ -583,7 +673,8 @@ def getLastRequestInChannel(ruid, uid):
     <ruid> - requesting user
     <uid> - receiving user
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT rid FROM requests WHERE ruid = %s AND uid = %s '
     query += 'ORDER BY timestamp DESC'
     cursor.execute(query, (ruid, uid,))
@@ -598,7 +689,8 @@ def getUserByDisplayName(user):
     Gets a uid and displayname from a given username
     <user> - DisplayName to match
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT uid, displayname FROM users '
     query += 'WHERE displayname LIKE %s'
     cursor.execute(query, [user, ])
@@ -613,7 +705,8 @@ def setUserPassword(uid, pw):
     <pw> - Password (hashed!) to set.
     Returns number of affected users. One or zero, hopefully!
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'UPDATE users SET password = %s WHERE uid = %s'
     cursor.execute(query, (pw, uid,))
     return cursor.rowcount
@@ -626,7 +719,8 @@ def getLoginUser(username):
     <password> - PW hash to match
     Returns the matching user or None
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT username, password, uid, displayname FROM users WHERE username = %s OR email = %s'
     cursor.execute(query, [username, username, ])
     user = cursor.fetchone()
@@ -639,7 +733,8 @@ def getStreamlabsUser(sluid):
     <sluid> - StreamLabs ID to find a match for
     Returns a user object, or None
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames '
     query += 'FROM users WHERE sluid = %s'
     cursor.execute(query, (sluid, ))
@@ -653,7 +748,8 @@ def getTwitchUser(tuid):
     <tuid> - Twitch ID to find a match for
     Returns a user object, or None
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames '
     query += 'FROM users WHERE tuid = %s'
     cursor.execute(query, (tuid, ))
@@ -669,7 +765,8 @@ def setSLUIDForUser(sluid, slname, uid):
     <uid> - Local user to update
     Returns the number of changed rows (one or zero!)
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'UPDATE users SET sluid = %s, slname = %s WHERE uid = %s'
     cursor.execute(query, (sluid, slname, uid))
     return cursor.rowcount
@@ -683,7 +780,8 @@ def setTUIDForUser(tuid, tname, uid):
     <uid> - Local user to update
     Returns the number of changed rows (one or zero!)
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'UPDATE users SET tuid = %s, tname = %s WHERE uid = %s'
     cursor.execute(query, (tuid, tname, uid))
     return cursor.rowcount
@@ -694,7 +792,8 @@ def getPasswordForUser(uid):
     Returns the password hash for a user.
     <uid> - Local user to pull the password for.
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'SELECT password FROM users WHERE uid = %s'
     cursor.execute(query, (uid,))
     pw = cursor.fetchone()['password']
@@ -706,7 +805,8 @@ def unlinkTwitch(uid):
     Unlink a twitch account from a local account
     <uid> - local account to unlink
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'UPDATE users SET tuid = 0, tname = "" WHERE uid = %s'
     cursor.execute(query, (uid,))
     return cursor.rowcount
@@ -717,7 +817,8 @@ def unlinkStreamlabs(uid):
     Unlink a Streamlabs account from a local account
     <uid> - local account to unlink
     """
-    cursor = db.connection.cursor()
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
     query = 'UPDATE users SET sluid = 0, slname = "" WHERE uid = %s'
     cursor.execute(query, (uid,))
     return cursor.rowcount

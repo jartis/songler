@@ -15,15 +15,15 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # Copy the content of the local src directory to the working directory
+COPY api.py .
 COPY app.py .
 COPY auth.py .
-COPY api.py .
+COPY conf.py .
+COPY dbutil.py .
+COPY nightbot.py .
 COPY routes.py .
 COPY serve.py .
-COPY dbconf.py .
-COPY dbutil.py .
-COPY yt.py .
-COPY nightbot.py .
+COPY util.py .
 COPY templates ./templates/
 COPY static ./static/
 

@@ -33,7 +33,6 @@ API Endpoints and sample commands:
 * Add a 404 page
 * Move user options into a new table (config?)
 * Add config option for "rate limit requests"
-* How to handle multiple requests for same slid (priority? Hotlist?)
 * "Hotlist" overlay - Chime for aging requests?
 * Fix local dates/times in DB for plays table
 * Make Mobile Friendly
@@ -78,6 +77,7 @@ API Endpoints and sample commands:
 * Password Recovery
 * Verify password on change from profile page?
 * Users created with Streamlabs don't have an email: Add a nag?
+* User confirmation email?
 
 ### Refactoring / Tech Debt
 
@@ -96,6 +96,7 @@ API Endpoints and sample commands:
 
 ## Done
 
+* ~~How to handle multiple requests for same slid (priority? Hotlist?)~~ Song requests are unique
 * ~~Add most recent 'Last Played' to song info page~~
 * ~~Error handling for adding song if the server catches fire~~
 * ~~Move all DB functionality out of Auth~~

@@ -1,18 +1,10 @@
-from app import app, addNewUser, getVideoId
-import api
-import auth
-import random
-from flask import Flask, url_for, redirect, request, jsonify, render_template, g, session, flash
-from flask_bcrypt import Bcrypt
-from flask_oauthlib.client import OAuth
-from twitch import *
-from enum import IntEnum
-from urllib.parse import urlparse
-from dbconf import *
+from flask import Blueprint, render_template, g, session
+from conf import *
 from dbutil import *
 
+route_blueprint = Blueprint('route_blueprint', __name__)
 
-@app.route('/login')
+@route_blueprint.route('/login')
 def renderLogin():
     """
     Shows the login page.
@@ -20,7 +12,7 @@ def renderLogin():
     return render_template('login.jinja')
 
 
-@app.route('/newuser')
+@route_blueprint.route('/newuser')
 def newuser():
     """
     Shows the Create (native) User page
@@ -28,7 +20,7 @@ def newuser():
     return render_template('newuser.jinja')
 
 
-@app.route('/wheel')
+@route_blueprint.route('/wheel')
 def renderWheel():
     """
     Shows the current logged-in user's overlay page.
@@ -38,8 +30,8 @@ def renderWheel():
     return render_template('wheel.jinja')
 
 
-@app.route('/')
-@app.route('/home')
+@route_blueprint.route('/')
+@route_blueprint.route('/home')
 def renderHome():
     """
     Shows the homepage.
@@ -47,7 +39,7 @@ def renderHome():
     return render_template('home.jinja')
 
 
-@app.route('/songlist/<user>', methods=['GET', ])
+@route_blueprint.route('/songlist/<user>', methods=['GET', ])
 def showSongList(user):
     """
     Shows the public songlist for a given user.
@@ -63,7 +55,7 @@ def showSongList(user):
         return render_template('error.jinja', error=("No user found with the name " + user))
 
 
-@app.route('/managelist', methods=['GET', ])
+@route_blueprint.route('/managelist', methods=['GET', ])
 def manageSongList():
     """
     Shows the song list manager / editor for the current logged in user.
@@ -73,7 +65,7 @@ def manageSongList():
     else:
         return render_template('error.jinja', error=("No songlist found for user " + g.username))
 
-@app.route('/requests', methods=['GET',])
+@route_blueprint.route('/requests', methods=['GET',])
 def manageRequests():
     """
     Shows the request list manager for the current logged in user.
@@ -83,7 +75,7 @@ def manageRequests():
     else:
         return render_template('error.jinja', error=("No request list found for user " + g.username))
 
-@app.route('/profile/<user>', methods=['GET', ])
+@route_blueprint.route('/profile/<user>', methods=['GET', ])
 def renderProfile(user):
     """
     Gets the profile page for the specified user.
@@ -98,7 +90,7 @@ def renderProfile(user):
         return render_template('error.jinja', error=("No user found with the name " + user))
 
 
-@app.route('/editprofile', methods=['GET', ])
+@route_blueprint.route('/editprofile', methods=['GET', ])
 def editProfile():
     """
     Edits the profile of the currently logged in user.
@@ -109,7 +101,7 @@ def editProfile():
     return render_template('editprofile.jinja')
 
 
-@app.route('/song/<sid>', methods=['GET', ])
+@route_blueprint.route('/song/<sid>', methods=['GET', ])
 def songInfo(sid):
     """
     Gets a song's "Profile Page".
@@ -119,7 +111,7 @@ def songInfo(sid):
     return render_template('song.jinja', sid=sid)
 
 
-@app.route('/artist/<aid>', methods=['GET', ])
+@route_blueprint.route('/artist/<aid>', methods=['GET', ])
 def artistInfo(aid):
     """
     Gets an artist's "Profile Page".
@@ -129,7 +121,7 @@ def artistInfo(aid):
     return render_template('artist.jinja', aid=aid)
 
 
-@app.route('/reqs/', methods=['GET',])
+@route_blueprint.route('/reqs/', methods=['GET',])
 def minReqs():
     """
     Minimal version of the requests page, suitable for overlays

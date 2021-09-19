@@ -1,20 +1,16 @@
-from app import app, addNewUser
-import api
-import routes
-import random
-from flask import Flask, url_for, redirect, request, jsonify, render_template, g, session, flash
-from flask_bcrypt import Bcrypt
+from flask import Blueprint, url_for, redirect, request, render_template, g, session, flash
+import bcrypt
 from flask_oauthlib.client import OAuth
 from twitch import *
-from enum import IntEnum
-from urllib.parse import urlparse
 import json
-from dbconf import *
+from conf import *
 import requests
 from dbutil import *
 
+
+auth_blueprint = Blueprint('auth_blueprint', __name__)
+
 oauth = OAuth()
-bcrypt = Bcrypt(app)
 
 twitchoauth = oauth.remote_app('twitch',
                                base_url='https://api.twitch.tv/kraken/',
@@ -49,15 +45,12 @@ def get_twitch_token(token=None):
     """
     return session.get('twitch_token')
 
-    # API endpoint for adding a user
-
-
 @sloauth.tokengetter
 def get_sl_token():
     return session.get('access_token')
 
 
-@app.route('/adduser', methods=['POST', ])
+@auth_blueprint.route('/adduser', methods=['POST', ])
 def addUser():
     """
     Creates a new 'local' user in the table and logs them in.
@@ -77,10 +70,10 @@ def addUser():
     session['loggedIn'] = True
     session['uid'] = uid
     session['displayname'] = username
-    return redirect(url_for('renderHome'))
+    return redirect(url_for('route_blueprint.renderHome'))
 
 
-@app.route('/api/v1/savepass', methods=['POST', ])
+@auth_blueprint.route('/api/v1/savepass', methods=['POST', ])
 def savePass():
     """
     Saves a new password for the currently logged in user
@@ -96,7 +89,7 @@ def savePass():
     return 'NG'  # Something bad happened!
 
 
-@app.route('/authenticate', methods=['POST', ])
+@auth_blueprint.route('/authenticate', methods=['POST', ])
 def authenticate():
     """
     Attempts to authenticate a user.
@@ -118,13 +111,13 @@ def authenticate():
             session['displayname'] = user['displayname']
             session['loggedIn'] = True
             session['uid'] = user['uid']
-            return redirect(url_for('renderHome'))
+            return redirect(url_for('route_blueprint.renderHome'))
         else:
             flash('Invalid Username or Password')
             return render_template('login.jinja', username=g.username, loggedIn=g.loggedin)
 
 
-@app.route('/sllink')
+@auth_blueprint.route('/sllink')
 def sllink():
     """
     Endpoint for linking Streamlabs account to existing account.
@@ -132,7 +125,7 @@ def sllink():
     return sloauth.authorize(callback=url_for('slauth', _external=True, _scheme=app.config['SCHEME'],))
 
 
-@app.route('/slauth')
+@auth_blueprint.route('/slauth')
 def slauth():
     """
     Callback endpoint for Streamlabs OAuth account linking.
@@ -177,10 +170,10 @@ def slauth():
             session['displayname'] = row['displayname']
         else:
             setSLUIDForUser(sluid, slname, session['uid'])
-        return redirect(url_for('editProfile'))
+        return redirect(url_for('route_blueprint.editProfile'))
 
 
-@app.route('/tlink')
+@auth_blueprint.route('/tlink')
 def twitchlink():
     """
     Endpoint for linking Twitch account to existing account.
@@ -188,7 +181,7 @@ def twitchlink():
     return twitchoauth.authorize(callback=url_for('tlinkok', _external=True, _scheme=app.config['SCHEME'],))
 
 
-@app.route('/tunlink')
+@auth_blueprint.route('/tunlink')
 def twitchunlink():
     """
     Endpoint for unlinking your Twitch account from existing account
@@ -200,10 +193,10 @@ def twitchunlink():
     # TODO: Handle errors on unlinking
     session['tuid'] = 0
     session['tname'] = ''
-    return redirect(url_for('editProfile'))
+    return redirect(url_for('route_blueprint.editProfile'))
 
 
-@app.route('/slunlink')
+@auth_blueprint.route('/slunlink')
 def slunlink():
     """
     Endpoint for unlinking your Streamlabs account from existing account
@@ -214,10 +207,10 @@ def slunlink():
     unlinkStreamlabs(session['uid'])
     session['sluid'] = 0
     session['slname'] = ''
-    return redirect(url_for('editProfile'))
+    return redirect(url_for('route_blueprint.editProfile'))
 
 
-@app.route('/tlinkok')
+@auth_blueprint.route('/tlinkok')
 def tlinkok():
     """
     Callback endpoint for Twitch OAuth login.
@@ -243,19 +236,19 @@ def tlinkok():
         session['displayname'] = row['displayname']
         session['tuid'] = twitchuid
         session['tname'] = tname
-        return redirect(url_for('editProfile'))
+        return redirect(url_for('route_blueprint.editProfile'))
     return render_template('error.jinja', error=('Error linking account: ' + request.args['error'] + ' - ' + request.args['error_description']))
 
 
-@app.route('/tlogin')
+@auth_blueprint.route('/tlogin')
 def login():
     """
     Endpoint for logging in with Twitch OAuth.
     """
-    return twitchoauth.authorize(callback=url_for('authorized', _external=True, _scheme=app.config['SCHEME'],))
+    return twitchoauth.authorize(callback=url_for('auth_blueprint.authorized', _external=True, _scheme=scheme,))
 
 
-@app.route('/tlogin/authorized')
+@auth_blueprint.route('/tlogin/authorized')
 def authorized():
     """
     Callback endpoint for Twitch OAuth login.
@@ -286,10 +279,10 @@ def authorized():
     session['loggedIn'] = True
     session['username'] = row['username']
     session['displayname'] = row['displayname']
-    return redirect(url_for('renderHome'))
+    return redirect(url_for('route_blueprint.renderHome'))
 
 
-@app.route('/logout')
+@auth_blueprint.route('/logout')
 def logout():
     """
     Clears the session and logs out.

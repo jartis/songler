@@ -1,7 +1,10 @@
-from app import app
+from flask import Blueprint
 from dbutil import *
 
-@app.route('/api/v1/nbrand', methods=['GET'])
+nb_blueprint = Blueprint('nb_blueprint', __name__)
+
+
+@nb_blueprint.route('/api/v1/nbrand', methods=['GET'])
 def nbrand():
     """
     Adds a random song request from the user (via Nightbot).
@@ -21,7 +24,6 @@ def nbrand():
     channelUID = getUidFromTName(channelName)
     if (ChannelUID == -1):
         return 'There was an error requesting your random song!'
-    # TODO: Rate limiting will go here.
     # Then get all the public songs for the user...
     results = getUserSongs(channelUID, True)
     # Now pick one at random...
@@ -30,11 +32,19 @@ def nbrand():
     slid = song['slid']
     sn = song['title'] + ' by ' + song['artist']
     # FINALLY put in the actual request
-    addRequest(reqUID, reqUsername, 0, slid)
-    return f'{reqUsername}, Your request for {sn} has been added to the queue!'
+    canRequest = canMakeRequest(reqUID, slid)
+    if (canRequest == 'K'):
+        addRequest(reqUID, reqUsername, 0, slid)
+        return f'{reqUsername}, your request for {sn} has been added to the queue!'
+    elif (canRequest == 'U'):
+        return f'{reqUsername}, you already have a request in the queue.'
+    elif (canRequest == 'S'):
+        return f'{reqUsername}, this song is already in the request queue.'
+    # And a failsafe
+    return f'{reqUsername}, there was an error requesting this song.'
 
 
-@app.route('/api/v1/nbreq', methods=['GET'])
+@nb_blueprint.route('/api/v1/nbreq', methods=['GET'])
 def nbreq():
     """
     Finds the closest match for a given search string and adds a request if able.
@@ -60,26 +70,34 @@ def nbreq():
     channelUID = getUidFromTName(channelName)
     if (ChannelUID == -1):
         return 'There was an error requesting your song!'
-    # TODO: Rate limiting will go here.
     # Then get all the public songs for the user...
     results = getUserSongs(channelUID, True)
-    results = cursor.fetchall()
-    songstrings = [r['artist'].lower() + ' ' + r['title'].lower() for r in results]
+    songstrings = [r['artist'].lower() + ' ' + r['title'].lower()
+                   for r in results]
     match = process.extractOne(searchString, songstrings)
     if (match[1] < 90):  # Arbitrary limit for closest match
         return 'No match found for your request.'
     # Okay, get the ACTUAL song from that perfect match
-    song = next((s for s in results if (s['artist'].lower() + ' ' + s['title'].lower()) == match[0]), None)
+    song = next((s for s in results if (
+        s['artist'].lower() + ' ' + s['title'].lower()) == match[0]), None)
     if (song is None):
         return 'No match found for your request.'
     slid = song['slid']
-    # FINALLY put in the actual request
-    addRequest(reqUID, reqUsername, 0, slid)
     sn = song['title'] + ' by ' + song['artist']
-    return f'{reqUsername}, your request for {sn} has been added to the queue!'
+    # FINALLY put in the actual request
+    canRequest = canMakeRequest(reqUID, slid)
+    if (canRequest == 'K'):
+        addRequest(reqUID, reqUsername, 0, slid)
+        return f'{reqUsername}, your request for {sn} has been added to the queue!'
+    elif (canRequest == 'U'):
+        return f'{reqUsername}, you already have a request in the queue.'
+    elif (canRequest == 'S'):
+        return f'{reqUsername}, this song is already in the request queue.'
+    # And a failsafe
+    return f'{reqUsername}, there was an error requesting this song.'
 
 
-@app.route('/api/v1/nbws', methods=['GET'])
+@nb_blueprint.route('/api/v1/nbws', methods=['GET'])
 def nbws():
     """
     Withdraws (removes) the calling user's last request.

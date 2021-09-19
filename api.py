@@ -1,20 +1,11 @@
-from app import app, addNewUser, getVideoId
-import auth
-import routes
-import random
-from flask import Flask, url_for, redirect, request, jsonify, render_template, g, session, flash
-from flask_bcrypt import Bcrypt
-from flask_oauthlib.client import OAuth
-from enum import IntEnum
-from urllib.parse import urlparse
-from urllib import parse
-from thefuzz import fuzz
-from thefuzz import process
+from flask import Blueprint, request, jsonify, g, session
 from dbutil import *
 import random
 
+api_blueprint = Blueprint('api_blueprint', __name__)
 
-@app.route('/api/v1/getconfig', methods=['GET', ])
+
+@api_blueprint.route('/api/v1/getconfig', methods=['GET', ])
 def api_getconfig():
     """
     Pulls a blob of JSON configuration from the DB for a user.
@@ -28,7 +19,7 @@ def api_getconfig():
     return jsonify(result)
 
 
-@app.route('/api/v1/saveconfig', methods=['POST', ])
+@api_blueprint.route('/api/v1/saveconfig', methods=['POST', ])
 def api_saveconfig():
     """
     Stores a blob of config data in the DB from an overlay page.
@@ -43,7 +34,7 @@ def api_saveconfig():
     return 'OK'
 
 
-@app.route('/api/v1/checkuser/<username>', methods=['GET', ])
+@api_blueprint.route('/api/v1/checkuser/<username>', methods=['GET', ])
 def api_checkuser(username):
     """
     Searches for <user> as a username in the user table.
@@ -52,7 +43,7 @@ def api_checkuser(username):
     return usernameInUse(username)
 
 
-@app.route('/api/v1/checkemail/<email>', methods=['GET', ])
+@api_blueprint.route('/api/v1/checkemail/<email>', methods=['GET', ])
 def api_checkemail(email):
     """
     Searches for <email> in the user table.
@@ -61,8 +52,8 @@ def api_checkemail(email):
     return emailInUse(email)
 
 
-@app.route('/api/v1/allsongs', methods=['GET'])
-@app.route('/api/v1/allsongs/<uid>', methods=['GET'])
+@api_blueprint.route('/api/v1/allsongs', methods=['GET'])
+@api_blueprint.route('/api/v1/allsongs/<uid>', methods=['GET'])
 def api_allsongs(uid=-1):
     """
     Gets all songs for the currently logged in user.
@@ -76,7 +67,7 @@ def api_allsongs(uid=-1):
     return jsonify(result)
 
 
-@app.route('/api/v1/more', methods=['GET'])
+@api_blueprint.route('/api/v1/more', methods=['GET'])
 def refillUserSongs():
     """
     Gets a list of songs from a user's songlist. Request must include:
@@ -99,7 +90,7 @@ def refillUserSongs():
     return jsonify(result[0:count])
 
 
-@app.route('/api/v1/playslid/<slid>', methods=['GET'])
+@api_blueprint.route('/api/v1/playslid/<slid>', methods=['GET'])
 def api_playslid(slid):
     """
     Increments the play count and sets the last played date to now, for a given songlist id.
@@ -116,7 +107,7 @@ def api_playslid(slid):
     return 'NG'
 
 
-@app.route('/api/v1/playreq/<rid>', methods=['GET'])
+@api_blueprint.route('/api/v1/playreq/<rid>', methods=['GET'])
 def api_playreq(rid):
     """
     Increments the play count and sets the last played date to now, for a given request id.
@@ -131,7 +122,7 @@ def api_playreq(rid):
     return 'NG'
 
 
-@app.route('/api/v1/getpubsongs/<uid>', methods=['GET'])
+@api_blueprint.route('/api/v1/getpubsongs/<uid>', methods=['GET'])
 def api_getpubsongs(uid):
     """
     Gets the full list of publicly visible songs for a user.
@@ -142,7 +133,7 @@ def api_getpubsongs(uid):
     return jsonify(result)
 
 
-@app.route('/api/v1/userinfo/<uid>', methods=['GET'])
+@api_blueprint.route('/api/v1/userinfo/<uid>', methods=['GET'])
 def api_userinfo(uid):
     """
     Gets the username, Twitch UID, membership date from the user table for a user.
@@ -152,7 +143,7 @@ def api_userinfo(uid):
     return jsonify(result)
 
 
-@app.route('/api/v1/reqcount', methods=['GET'])
+@api_blueprint.route('/api/v1/reqcount', methods=['GET'])
 def api_reqcount():
     """
     Gets count of requests for current logged in user.
@@ -163,7 +154,7 @@ def api_reqcount():
     return str(getReqCount(uid))
 
 
-@app.route('/api/v1/getreqs', methods=['GET'])
+@api_blueprint.route('/api/v1/getreqs', methods=['GET'])
 def api_getreqs():
     """
     Gets the pending requests for current logged in user.
@@ -177,7 +168,7 @@ def api_getreqs():
     return jsonify(result)
 
 
-@app.route('/api/v1/addreq/<slid>', methods=['GET'])
+@api_blueprint.route('/api/v1/addreq/<slid>', methods=['GET'])
 def api_addreq(slid):
     """
     Adds a request to the request MQ. Assumes the request source from the session's UID.
@@ -196,15 +187,18 @@ def api_addreq(slid):
     slid = int(slid)
     # First, a rate limit check - is there a request for target user in the
     # Request MQ from us alread?
-    if (canMakeRequest(ruid, slid) is False):
+    canRequest = canMakeRequest(ruid, slid)
+    if (canRequest == 'U'):
         return 'QF'
+    elif (canRequest == 'S'):
+        return 'SQ'
     count = addRequest(ruid, rname, prio, slid)
     if (count > 0):
         return 'OK'
     return 'NG'
 
 
-@app.route('/api/v1/removereq/<rid>', methods=['GET'])
+@api_blueprint.route('/api/v1/removereq/<rid>', methods=['GET'])
 def api_removereq(rid):
     """
     Removes a request from the Request MQ.
@@ -216,7 +210,7 @@ def api_removereq(rid):
     return 'NG'
 
 
-@app.route('/api/v1/addsong', methods=['POST'])
+@api_blueprint.route('/api/v1/addsong', methods=['POST'])
 def api_addsong():
     """
     Adds a new song to a user's songlist.
@@ -240,7 +234,7 @@ def api_addsong():
     return 'NG'
 
 
-@app.route('/api/v1/artistinfo/<aid>', methods=['GET'])
+@api_blueprint.route('/api/v1/artistinfo/<aid>', methods=['GET'])
 def api_artistinfo(aid):
     """
     Gets artist 'profile' info for a specified artist id.
@@ -253,7 +247,7 @@ def api_artistinfo(aid):
     return jsonify(artist)
 
 
-@app.route('/api/v1/setshowreq', methods=['POST'])
+@api_blueprint.route('/api/v1/setshowreq', methods=['POST'])
 def api_setshownames():
     """
     Sets the "Show/Hide requester names" flag on the current logged in user's account.
@@ -268,7 +262,7 @@ def api_setshownames():
     return 'N'
 
 
-@app.route('/api/v1/setanon', methods=['POST'])
+@api_blueprint.route('/api/v1/setanon', methods=['POST'])
 def api_setanon():
     """
     Sets the "Allow anonymous requests" flag on the current logged in user's account.
@@ -283,8 +277,8 @@ def api_setanon():
     return 'NG'
 
 
-@app.route('/api/v1/getshowreq', methods=['GET'])
-@app.route('/api/v1/getshowreq/<uid>', methods=['GET'])
+@api_blueprint.route('/api/v1/getshowreq', methods=['GET'])
+@api_blueprint.route('/api/v1/getshowreq/<uid>', methods=['GET'])
 def api_getshownames(uid=0):
     """
     Gets the show/hide requester names flag for the current logged in user.
@@ -297,8 +291,8 @@ def api_getshownames(uid=0):
     return getShowNames(uid)
 
 
-@app.route('/api/v1/getanon', methods=['GET'])
-@app.route('/api/v1/getanon/<uid>', methods=['GET'])
+@api_blueprint.route('/api/v1/getanon', methods=['GET'])
+@api_blueprint.route('/api/v1/getanon/<uid>', methods=['GET'])
 def api_getanon(uid=0):
     """
     Gets the allow anonymous requests flag for the current logged in user.
@@ -312,7 +306,7 @@ def api_getanon(uid=0):
     return getAnon(uid)
 
 
-@app.route('/api/v1/setdisplayname', methods=['POST'])
+@api_blueprint.route('/api/v1/setdisplayname', methods=['POST'])
 def api_setdisplayname():
     """
     Sets the display name for the currently logged in user.
@@ -327,7 +321,7 @@ def api_setdisplayname():
     return 'OK'
 
 
-@app.route('/api/v1/songinfo/<sid>', methods=['GET'])
+@api_blueprint.route('/api/v1/songinfo/<sid>', methods=['GET'])
 def api_songinfo(sid):
     """
     Gets song 'profile' info for a specified song id.
@@ -341,7 +335,7 @@ def api_songinfo(sid):
     return jsonify(songinfo)
 
 
-@app.route('/api/v1/alluserdnames', methods=['GET'])
+@api_blueprint.route('/api/v1/alluserdnames', methods=['GET'])
 def api_alluserdnames():
     """
     Get a raw list of user displaynames for populating autocomplete box.
@@ -350,7 +344,7 @@ def api_alluserdnames():
     return jsonify(result)
 
 
-@app.route('/api/v1/allartists', methods=['GET'])
+@api_blueprint.route('/api/v1/allartists', methods=['GET'])
 def api_allartists():
     """
     Get a raw list of artists and aids for populating autocomplete box.
@@ -359,7 +353,7 @@ def api_allartists():
     return jsonify(result)
 
 
-@app.route('/api/v1/alltitles', methods=['GET'])
+@api_blueprint.route('/api/v1/alltitles', methods=['GET'])
 def api_alltitles():
     """
     Get a raw list of titles and tids for populating autocomplete box.
@@ -368,7 +362,7 @@ def api_alltitles():
     return jsonify(result)
 
 
-@app.route('/api/v1/delsong', methods=['POST'])
+@api_blueprint.route('/api/v1/delsong', methods=['POST'])
 def api_delsong():
     """
     Removes a song from a user's songlist.
@@ -383,7 +377,7 @@ def api_delsong():
     return 'OK'
 
 
-@app.route('/api/v1/allsonginfos', methods=['GET'])
+@api_blueprint.route('/api/v1/allsonginfos', methods=['GET'])
 def api_allsonginfos():
     """
     Returns a list of all songs (artist, title, sid) for populating the autocomplete.
@@ -392,7 +386,7 @@ def api_allsonginfos():
     return jsonify(result)
 
 
-@app.route('/api/v1/setsongpub/<slid>/<pub>', methods=['GET'])
+@api_blueprint.route('/api/v1/setsongpub/<slid>/<pub>', methods=['GET'])
 def api_setsongpug(slid, pub):
     """
     Sets a songlist entry to public or non-public, if the session GUID matches the songlist entry owner.
@@ -406,7 +400,7 @@ def api_setsongpug(slid, pub):
     return 'NG'
 
 
-@app.route('/api/v1/setsongwheel/<slid>/<wheel>', methods=['GET'])
+@api_blueprint.route('/api/v1/setsongwheel/<slid>/<wheel>', methods=['GET'])
 def api_setsongwheel(slid, wheel):
     """
     Sets a songlist entry to "wheel-able" or not, if the session GUID matches the songlist entry owner.

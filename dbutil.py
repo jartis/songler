@@ -356,7 +356,7 @@ def canMakeRequest(ruid, slid):
         cursor.execute(query, (ruid, slid,))
         result = cursor.fetchall()
         if (len(result) > 0):
-            if (int(result['uid']) != int(ruid)):
+            if int(result[0]['uid']) != int(ruid):
                 # Only bail out if the song owner isn't the one requesting. You can fill your own queue.
                 return False
     return True

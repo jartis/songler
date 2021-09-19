@@ -37,6 +37,7 @@ API Endpoints and sample commands:
 * "Hotlist" overlay - Chime for aging requests?
 * Fix local dates/times in DB for plays table
 * Make Mobile Friendly
+* YTGetArtistTitle should error out on non-youtube links
 
 ### Wheel Overlay
 

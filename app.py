@@ -6,6 +6,7 @@ from flask_oauthlib.client import OAuth
 from twitch import *
 from urllib.parse import urlparse
 from dbconf import *
+import util
 
 app = Flask(
     __name__,
@@ -74,30 +75,13 @@ def addNewUser(username, password, email, displayname, uid=-1, tuid='', tname=''
     return int(row['uid'])
 
 
-def getVideoId(link):
-    """
-    Takes a youtube link and returns the trimmed video ID.
-    <link>: The youtube link to parse.
-    """
-    if (link == ''):
-        return ''
-    query = urlparse(link)
-    if query.hostname == 'youtu.be':
-        return query.path[1:]
-    if query.hostname in ('www.youtube.com', 'youtube.com'):
-        if query.path == '/watch':
-            p = urlparse.parse_qs(query.query)
-            return p['v'][0]
-        if query.path[:7] == '/embed/':
-            return query.path.split('/')[2]
-        if query.path[:3] == '/v/':
-            return query.path.split('/')[2]
-    return ''
+
 
 
 import auth
 import routes
 import api
+import nightbot
 from dbutil import *
 
 if __name__ == '__main__':

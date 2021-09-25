@@ -178,6 +178,10 @@ function reqSong(e) {
             makeToast(ERROR, '⚠️ Error', 'You already have a request in the queue for this user.');
         } else if (this.responseText == 'OK') {
             makeToast(SUCCESS, '✔️ Success', 'Your request for ' + title + ' by ' + artist + ' has been placed!');
+        } else if (this.responseText == 'UO') {
+            makeToast(ERROR, '⚠️ Error', 'This user is offline or not accepting requests.');
+        } else if (this.responseText == 'SQ') {
+            makeToast(ERROR, '⚠️ Error', 'This song is already in the queue.');
         } else {
             makeToast(ERROR, '⚠️ Error', 'Something weird happened...');
         }

@@ -40,6 +40,8 @@ def nbrand():
         return f'{reqUsername}, you already have a request in the queue.'
     elif (canRequest == 'S'):
         return f'{reqUsername}, this song is already in the request queue.'
+    elif (canRequest == 'O'):
+        return f'{reqUsername}, this user is not online or accepting requests right now.'
     # And a failsafe
     return f'{reqUsername}, there was an error requesting this song.'
 
@@ -93,6 +95,8 @@ def nbreq():
         return f'{reqUsername}, you already have a request in the queue.'
     elif (canRequest == 'S'):
         return f'{reqUsername}, this song is already in the request queue.'
+    elif (canRequest == 'O'):
+        return f'{reqUsername}, this user is not online or accepting requests right now.'
     # And a failsafe
     return f'{reqUsername}, there was an error requesting this song.'
 

@@ -192,6 +192,8 @@ def api_addreq(slid):
         return 'QF'
     elif (canRequest == 'S'):
         return 'SQ'
+    elif (canRequest == 'O'):
+        return 'UO'
     count = addRequest(ruid, rname, prio, slid)
     if (count > 0):
         return 'OK'
@@ -247,6 +249,66 @@ def api_artistinfo(aid):
     return jsonify(artist)
 
 
+@api_blueprint.route('/api/v1/setallowoffline', methods=['POST'])
+def api_setallowoffline():
+    """
+    Sets the "Allow Offline Requests" flag for a user
+    POST: allowoffline = 0/1 for the flag (0 deny, 1 allow)
+    """
+    if (session['uid'] == 0):
+        return 'NG'  # Gotta be logged in, yo!
+    allowoffline = int(request.json['allowoffline'])
+    result = setAllowOffline(session['uid'], allowoffline)
+    if (result > 0):
+        return str(allowoffline)
+    return 'NG'
+
+
+@api_blueprint.route('/api/v1/getallowoffline', methods=['GET'])
+@api_blueprint.route('/api/v1/getallowoffline/<uid>', methods=['GET'])
+def api_getallowoffline(uid=0):
+    """
+    Gets the "Allow Offline Requests" flag for a user
+    Defaults to a zero if not logged in or anything like that.
+    """
+    uid = int(uid)
+    if (uid == 0):
+        if (session['uid'] == 0):
+            return 'NG'
+        uid = int(session['uid'])
+    return getAllowOffline(uid)
+
+
+@api_blueprint.route('/api/v1/setonline', methods=['POST'])
+def api_setonline():
+    """
+    Sets the "Live / Online / Streaming" status for a user
+    POST: online = 0/1 for the flag (0 offline, 1 live)
+    """
+    if (session['uid'] == 0):
+        return 'NG'  # Gotta be logged in, yo!
+    online = int(request.json['online'])
+    result = setOnline(session['uid'], online)
+    if (result > 0):
+        return str(online)
+    return 'NG'
+
+
+@api_blueprint.route('/api/v1/getonline', methods=['GET'])
+@api_blueprint.route('/api/v1/getonline/<uid>', methods=['GET'])
+def api_getonline(uid=0):
+    """
+    Gets the "Live / Online / Streaming" status for a user
+    Defaults to a zero if not logged in or anything like that.
+    """
+    uid = int(uid)
+    if (uid == 0):
+        if (session['uid'] == 0):
+            return 'NG'
+        uid = int(session['uid'])
+    return getOnline(uid)
+
+
 @api_blueprint.route('/api/v1/setshowreq', methods=['POST'])
 def api_setshownames():
     """
@@ -256,24 +318,24 @@ def api_setshownames():
     if (session['uid'] == 0):
         return 'NG'
     show = int(request.json['show'])
-    result = setShowNames(uid, show)
+    result = setShowNames(session['uid'], show)
     if (result > 0):
         return str(show)
-    return 'N'
+    return 'NG'
 
 
 @api_blueprint.route('/api/v1/setanon', methods=['POST'])
 def api_setanon():
     """
     Sets the "Allow anonymous requests" flag on the current logged in user's account.
-    POST: show = 0/1 for the flag (1 to show, 0 to hide)
+    POST: anon = 0/1 for the flag (1 to allow, 0 to deny)
     """
     if (session['uid'] == 0):
         return 'NG'
-    anon = int(request.json['anon'])
-    result = setAnon(session['uid'], show)
+    allowanon = int(request.json['anon'])
+    result = setAnon(session['uid'], allowanon)
     if (result > 0):
-        return str(anon)
+        return str(allowanon)
     return 'NG'
 
 
@@ -412,3 +474,10 @@ def api_setsongwheel(slid, wheel):
     if (count == 1):
         return 'OK'
     return 'NG'
+
+@api_blueprint.route('/api/v1/getsldonations', methods=['GET'])
+def getsldonations():
+    """
+    Gets a list of streamlabs donations for the current user.
+    Dies if the session doesn't have a streamlabs access token.
+    """

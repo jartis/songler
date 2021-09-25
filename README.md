@@ -32,7 +32,6 @@ API Endpoints and sample commands:
 * Update breadcrumbs / navbar when on appropriate page
 * Add a 404 page
 * Move user options into a new table (config?)
-* Add config option for "rate limit requests"
 * "Hotlist" overlay - Chime for aging requests?
 * Fix local dates/times in DB for plays table
 * Make Mobile Friendly
@@ -58,7 +57,6 @@ API Endpoints and sample commands:
 
 * End-of-session reports (for import to practice trackers?)
 * Based on normalization, "fun reports" like most played artists?
-* Limits on requests for non logged in users
 * DDG tabs / lyrics / lead sheet auto search (feeling ducky)
 
 ### Song List Management
@@ -96,6 +94,9 @@ API Endpoints and sample commands:
 
 ## Done
 
+* ~~Add "active session" tracking~~
+* ~~Add config option for "rate limit requests"~~
+* ~~Limits on requests for non logged in users~~
 * ~~How to handle multiple requests for same slid (priority? Hotlist?)~~ Song requests are unique
 * ~~Add most recent 'Last Played' to song info page~~
 * ~~Error handling for adding song if the server catches fire~~

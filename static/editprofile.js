@@ -10,8 +10,9 @@ window.onload = function () {
         document.getElementById('password').addEventListener('input', checkPass);
         document.getElementById('passwordconf').addEventListener('input', checkPass);
         document.getElementById('displayName').addEventListener('change', setDisplayName);
-        document.getElementById('reqnames').addEventListener('change', setShowReqNames);
+        document.getElementById('reqnames').addEventListener('change', setShowReqName);
         document.getElementById('anon').addEventListener('change', setAnon);
+        document.getElementById('offline').addEventListener('change', setOffline);
         $('form').submit(false);
     };
     req.open('GET', APIURL + '/userinfo/' + uid);
@@ -65,13 +66,18 @@ function writeUserInfo() {
     pt += '<div class="form-group">';
     pt += '<label for="anon">Allow anonymous requests:</label>';
     pt += '<div class="text-center form-check form-switch"><input class="form-check-input" id="anon" name="anon" type="checkbox"/></div>';
+    pt += '<div class="form-group">';
+    pt += '<label for="offline">Allow offline requests:</label>';
+    pt += '<div class="text-center form-check form-switch"><input class="form-check-input" id="offline" name="offline" type="checkbox"/></div>';
+
     pt += '</form>';
 
     document.getElementById('userinfo').innerHTML = pt;
     document.getElementById('profilename').innerText = 'Edit Profile for ' + userinfo.username;
     document.getElementById('displayName').value = userinfo.displayname;
-    document.getElementById('reqnames').checked = (userinfo.showreqnames == 1);
-    document.getElementById('anon').checked = (userinfo.showreqnames == 1);
+    document.getElementById('reqnames').checked = (userinfo.showreqname == 1);
+    document.getElementById('anon').checked = (userinfo.allowanon == 1);
+    document.getElementById('offline').checked = (userinfo.allowoffline == 1);
 }
 
 function unlinkTwitch() {
@@ -90,7 +96,7 @@ function unlinkStreamlabs() {
     window.location = '/slunlink';
 }
 
-function setShowReqNames() {
+function setShowReqName() {
     let doShow = {
         show: (document.getElementById('reqnames').checked ? 1 : 0),
     };
@@ -101,9 +107,9 @@ function setShowReqNames() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         complete: function(msg) {
-            if (msg.responseText == 'Y') {
+            if (msg.responseText == '1') {
                 makeToast(SUCCESS, '✔️ Success', 'Your overlays will show requester names.');
-            } else if (msg.responseText == 'N') {
+            } else if (msg.responseText == '0') {
                 makeToast(SUCCESS, '✔️ Success', 'Your overlays will hide requester names.');
             } else {
                 makeToast(ERROR, '⚠️ Error', 'Error setting "Show Requester Names" option.');
@@ -119,7 +125,7 @@ function setAnon() {
     $.ajax({
         type: 'POST',
         url: APIURL + '/setanon',
-        data: JSON.stringify(doShow),
+        data: JSON.stringify(doAnon),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         complete: function(msg) {
@@ -129,6 +135,28 @@ function setAnon() {
                 makeToast(SUCCESS, '✔️ Success', 'Anonymous requests are disabled.');
             } else {
                 makeToast(ERROR, '⚠️ Error', 'Error setting "Anonymous Request" option.');
+            }
+        }
+    });
+}
+
+function setOffline() {
+    let doOffline = {
+        allowoffline: (document.getElementById('offline').checked ? 1 : 0),
+    };
+    $.ajax({
+        type: 'POST',
+        url: APIURL + '/setallowoffline',
+        data: JSON.stringify(doOffline),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        complete: function(msg) {
+            if (msg.responseText == '1') {
+                makeToast(SUCCESS, '✔️ Success', 'Offline requests are enabled.');
+            } else if (msg.responseText == '0') {
+                makeToast(SUCCESS, '✔️ Success', 'Offline requests are disabled.');
+            } else {
+                makeToast(ERROR, '⚠️ Error', 'Error setting "Offline Requests" option.');
             }
         }
     });

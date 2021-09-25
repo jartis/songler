@@ -12,4 +12,5 @@ twitchSecret = os.environ.get('TWITCHSECRET')
 slClientId = os.environ.get('SLCLIENTID')
 slSecret = os.environ.get('SLSECRET')
 scheme = os.environ.get('SCHEME')
+VER = '092521.0242'
 

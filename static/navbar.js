@@ -23,7 +23,7 @@ function populateSearch() {
     req.send();
     // Add the songs
     const areq = new XMLHttpRequest();
-    areq.onload = function() {
+    areq.onload = function () {
         let rawlist = JSON.parse(this.responseText);
         for (let i = 0; i < rawlist.length; i++) {
             let entry = {
@@ -51,6 +51,42 @@ function populateSearch() {
     sreq.send();
 }
 
+function startSession() {
+    setOnline(true);
+    document.getElementById('livealert').hidden = false;
+    document.getElementById('endbtn').hidden = false;
+    document.getElementById('startbtn').hidden = true;
+}
+
+function endSession() {
+    setOnline(false);
+    document.getElementById('livealert').hidden = true;
+    document.getElementById('endbtn').hidden = true;
+    document.getElementById('startbtn').hidden = false;
+}
+
+function setOnline(online) {
+    let doOnline = {
+        online: online,
+    };
+    $.ajax({
+        type: 'POST',
+        url: APIURL + '/setonline',
+        data: JSON.stringify(doOnline),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        complete: function (msg) {
+            if (msg.responseText == '1') {
+                makeToast(SUCCESS, '✔️ Success', 'You have started a new session!');
+            } else if (msg.responseText == '0') {
+                makeToast(SUCCESS, '✔️ Success', 'You have successfully ended your session.');
+            } else {
+                makeToast(ERROR, '⚠️ Error', 'LOLWUT');
+            }
+        }
+    });
+}
+
 let srch = new Autocomplete(document.getElementById('srch'), {
     data: optlist,
     onSelectItem: ({ label, value }) => {
@@ -62,7 +98,7 @@ let srch = new Autocomplete(document.getElementById('srch'), {
 function updateReqBadge() {
     const breq = new XMLHttpRequest();
     breq.onload = function () {
-        if (isNaN(Number(this.responseText))){
+        if (isNaN(Number(this.responseText))) {
             document.getElementById('reqbadge').innerText = '?';
         } else {
             document.getElementById('reqbadge').innerText = this.responseText;

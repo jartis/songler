@@ -16,7 +16,7 @@ function getShowNames() {
         }
         loadReqList();
     };
-    reqr.open('GET', APIURL + '/getshownames');
+    reqr.open('GET', APIURL + '/getshowreq');
     reqr.send();
 }
 

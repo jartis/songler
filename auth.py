@@ -143,9 +143,9 @@ def slauth():
     res = r.json()
     if ('access_token' in res and 'refresh_token' in res):
         # Get the user info with this token
-        access_token = res['access_token']
+        sltoken = res['access_token']
         refresh_token = res['refresh_token']
-        url = "https://streamlabs.com/api/v1.0/user?access_token=" + access_token
+        url = "https://streamlabs.com/api/v1.0/user?access_token=" + sltoken
         headers = {"Accept": "application/json"}
         response = requests.request("GET", url, headers=headers)
         userR = response.json()
@@ -161,7 +161,8 @@ def slauth():
                                  displayname=slname,
                                  uid=-1,
                                  sluid=sluid,
-                                 slname=slname)
+                                 slname=slname,
+                                 sltoken=sltoken)
                 row = getUserInfo(uid)
             # Set the session whatsits and let's rock!
             session['uid'] = row['uid']
@@ -170,6 +171,7 @@ def slauth():
             session['displayname'] = row['displayname']
         else:
             setSLUIDForUser(sluid, slname, session['uid'])
+        session['sltoken'] = sltoken
         return redirect(url_for('route_blueprint.editProfile'))
 
 

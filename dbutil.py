@@ -1,6 +1,7 @@
 from conf import *
 import mysql.connector as mysql
 
+
 def getConnection():
     try:
         cnx = mysql.connect(host=dbhost, port=dbport, user=dbuser,
@@ -219,6 +220,58 @@ def setDisplayName(dname, uid):
     return cursor.rowcount
 
 
+def getOnline(uid):
+    """
+    Returns the online status of a user, for... nefarious purposes.
+    <uid> - User to get the online status for
+    """
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
+    query = 'SELECT online FROM userconf WHERE uid = %s'
+    cursor.execute(query, (uid,))
+    result = cursor.fetchone()
+    return str(result['online'])
+
+
+def setOnline(uid, online):
+    """
+    Set's a user's online/offline (streaming / not streaming or live/not) status
+    <uid> - User to update live status for
+    <online> - Current "online" status
+    """
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
+    query = 'UPDATE userconf SET online = %s WHERE uid = %s'
+    cursor.execute(query, (online, uid,))
+    return cursor.rowcount
+
+
+def getAllowOffline(uid):
+    """
+    Returns the "Allow Offline Requests" option for a user
+    <uid> - User to get the allow-offline option for
+    """
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
+    query = 'SELECT allowoffline FROM userconf WHERE uid = %s'
+    cursor.execute(query, (uid,))
+    result = cursor.fetchone()
+    return str(result['allowoffline'])
+
+
+def setAllowOffline(uid, allowoffline):
+    """
+    Set's a user's "Allow Offline Requests" option
+    <uid> - User to update "Allow Offline Requests" option for
+    <allowoffline> - Current "allowoffline" status
+    """
+    cnx = getConnection()
+    cursor = cnx.cursor(dictionary=True)
+    query = 'UPDATE userconf SET allowoffline = %s WHERE uid = %s'
+    cursor.execute(query, (allowoffline, uid,))
+    return cursor.rowcount
+
+
 def getAnon(uid):
     """
     Returns the "Allow anonymous requests" config value for the specified user.
@@ -226,10 +279,10 @@ def getAnon(uid):
     """
     cnx = getConnection()
     cursor = cnx.cursor(dictionary=True)
-    query = 'SELECT anon FROM users WHERE uid = %s'
+    query = 'SELECT allowanon FROM userconf WHERE uid = %s'
     cursor.execute(query, (uid,))
     result = cursor.fetchone()
-    return str(result['anon'])
+    return str(result['allowanon'])
 
 
 def setAnon(uid, anon):
@@ -240,7 +293,7 @@ def setAnon(uid, anon):
     """
     cnx = getConnection()
     cursor = cnx.cursor(dictionary=True)
-    query = 'UPDATE users SET anon = %s WHERE uid = %s'
+    query = 'UPDATE userconf SET allowanon = %s WHERE uid = %s'
     cursor.execute(query, (anon, uid,))
     return cursor.rowcount
 
@@ -252,10 +305,10 @@ def getShowNames(uid):
     """
     cnx = getConnection()
     cursor = cnx.cursor(dictionary=True)
-    query = 'SELECT showreqnames FROM users WHERE uid = %s'
+    query = 'SELECT showreqname FROM userconf WHERE uid = %s'
     cursor.execute(query, (uid,))
     result = cursor.fetchone()
-    return str(result['showreqnames'])
+    return str(result['showreqname'])
 
 
 def setShowNames(uid, show):
@@ -266,7 +319,7 @@ def setShowNames(uid, show):
     """
     cnx = getConnection()
     cursor = cnx.cursor(dictionary=True)
-    query = 'UPDATE users SET showreqnames = %s WHERE uid = %s'
+    query = 'UPDATE userconf SET showreqname = %s WHERE uid = %s'
     cursor.execute(query, (show, uid,))
     return cursor.rowcount
 
@@ -421,21 +474,32 @@ def canMakeRequest(ruid, slid):
     """
     cnx = getConnection()
     cursor = cnx.cursor(dictionary=True)
+    # Get the UID, we're gonna need it any old way
+    query = 'SELECT uid FROM songlists WHERE slid = %s'
+    cursor.execute(query, (slid,))
+    result = cursor.fetchone()
+    uid = result['uid']
     if (ruid > 0):
-        query = 'SELECT rid, uid FROM requests WHERE ruid = %s AND uid IN '
-        query += '(SELECT uid FROM songlists WHERE slid = %s)'
-        cursor.execute(query, (ruid, slid,))
+        query = 'SELECT rid, uid FROM requests WHERE ruid = %s AND uid = %s'
+        cursor.execute(query, (ruid, uid,))
         result = cursor.fetchall()
         if (len(result) > 0):
-            if int(result[0]['uid']) != int(ruid):
+            if int(uid) != int(ruid):
                 # Only bail out if the song owner isn't the one requesting. You can fill your own queue.
-                return 'U' # 'U'ser has a request in the queue already
+                return 'U'  # 'U'ser has a request in the queue already
     query = 'SELECT rid FROM requests WHERE slid = %s AND uid IN '
     query += '(SELECT uid FROM songlists WHERE slid = %s)'
     cursor.execute(query, (slid, slid,))
     result = cursor.fetchall()
     if (len(result) > 0):
-            return 'S' # 'S'ong in queue already
+        return 'S'  # 'S'ong in queue already
+    query = 'SELECT allowoffline, online FROM userconf '
+    query += 'WHERE uid = %s'
+    cursor.execute(query, (uid,))
+    result = cursor.fetchone()
+    if (result['online'] == 0 and result['allowoffline'] == 0):
+        if int(uid) != int(ruid):
+            return 'O' # User is 'O'ffline and offline requests are disabled
     return 'K'
 
 
@@ -450,6 +514,8 @@ def addRequest(ruid, rname, prio, slid):
     """
     cnx = getConnection()
     cursor = cnx.cursor(dictionary=True)
+    if (rname is None):
+        rname = 'Anonymous'
     query = 'INSERT INTO requests (uid, ruid, slid, timestamp, rname, prio) '
     query += 'SELECT uid, %s, slid, NOW(), %s, %s FROM songlists '
     query += 'WHERE slid = %s'
@@ -497,13 +563,16 @@ def getReqCount(uid):
 def getUserInfo(uid):
     """
     Returns the {uid, username, signup, displayname, tuid, 
-    tname, sluid, slname, anon, showreqnames} info for the specified user.
+    tname, sluid, slname, anon, } info for the specified user.
     <uid> - The user ID to pull the userinfo for
     """
     cnx = getConnection()
     cursor = cnx.cursor(dictionary=True)
-    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames '
-    query += 'FROM users WHERE uid = %s'
+    query = 'SELECT users.uid, username, signup, displayname, tuid, tname, sluid, slname, '
+    query += 'userconf.allowanon, userconf.showreqname, userconf.online, userconf.allowoffline '
+    query += 'FROM users '
+    query += 'INNER JOIN userconf ON userconf.uid = users.uid '
+    query += 'WHERE users.uid = %s'
     cursor.execute(query, (uid,))
     result = cursor.fetchone()
     return result
@@ -735,8 +804,11 @@ def getStreamlabsUser(sluid):
     """
     cnx = getConnection()
     cursor = cnx.cursor(dictionary=True)
-    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames '
-    query += 'FROM users WHERE sluid = %s'
+    query = 'SELECT users.uid, username, signup, displayname, tuid, tname, sluid, slname, '
+    query += 'userconf.allowanon, userconf.showreqname '
+    query += 'FROM users '
+    query += 'INNER JOIN userinfo ON userinfo.uid = users.uid '
+    query += 'WHERE sluid = %s'
     cursor.execute(query, (sluid, ))
     row = cursor.fetchone()
     return row
@@ -750,8 +822,11 @@ def getTwitchUser(tuid):
     """
     cnx = getConnection()
     cursor = cnx.cursor(dictionary=True)
-    query = 'SELECT uid, username, signup, displayname, tuid, tname, sluid, slname, anon, showreqnames '
-    query += 'FROM users WHERE tuid = %s'
+    query = 'SELECT users.uid, username, signup, displayname, tuid, tname, sluid, slname, '
+    query += 'userconf.allowanon, userconf.showreqname '
+    query += 'FROM users '
+    query += 'INNER JOIN userconf ON users.uid = userconf.uid '
+    query += 'WHERE tuid = %s'
     cursor.execute(query, (tuid, ))
     row = cursor.fetchone()
     return row
